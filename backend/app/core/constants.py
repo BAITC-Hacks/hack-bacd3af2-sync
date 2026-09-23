@@ -22,12 +22,15 @@ class Turbine:
     longitude: float
 
 
-# NOTE: coordinates must match the ones provided in the case materials.
+# Turbine coordinates from the case materials (south-east Kazakhstan).
 # They are forwarded to the weather provider and to the ML model via the weather DataFrame.
 TURBINES: Final[dict[int, Turbine]] = {
-    1: Turbine(turbine_id=1, name="Turbine 1", latitude=51.6240, longitude=73.1020),
-    2: Turbine(turbine_id=2, name="Turbine 2", latitude=51.6315, longitude=73.1185),
+    1: Turbine(turbine_id=1, name="Turbine 1", latitude=43.645150, longitude=78.535604),
+    2: Turbine(turbine_id=2, name="Turbine 2", latitude=43.643198, longitude=78.538828),
 }
+
+# Local time zone of the site: weather timestamps and forecast_origin are wall-clock time here.
+SITE_TIMEZONE: Final = "Asia/Almaty"
 
 # --- Contract with the ML part (see README → "ML integration contract") -----------------
 

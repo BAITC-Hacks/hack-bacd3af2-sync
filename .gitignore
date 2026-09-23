@@ -1,0 +1,24 @@
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Dependencies & virtual environments
+node_modules/
+.venv/
+venv/
+.runtime-deps/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local env files (templates are .env.example)
+.env
+.env.local

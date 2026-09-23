@@ -16,7 +16,7 @@ import httpx
 import numpy as np
 import pandas as pd
 
-from app.core.constants import TURBINES, WEATHER_COLUMNS, Turbine
+from app.core.constants import SITE_TIMEZONE, TURBINES, WEATHER_COLUMNS, Turbine
 from app.utils.datetime import horizon_end, hourly_range
 
 logger = logging.getLogger(__name__)
@@ -101,7 +101,7 @@ class OpenMeteoWeatherProvider(WeatherProvider):
             "longitude": turbine.longitude,
             "hourly": "wind_speed_100m,temperature_2m",
             "wind_speed_unit": "ms",
-            "timezone": "auto",
+            "timezone": SITE_TIMEZONE,
             "start_date": start.date().isoformat(),
             "end_date": end.date().isoformat(),
         }
