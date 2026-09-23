@@ -2,6 +2,7 @@
 natural-language explanation produced by the agent's final step."""
 
 from dataclasses import dataclass, field
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -131,13 +132,23 @@ def check_physical_consistency(predictions: dict[int, pd.DataFrame]) -> Consiste
     return ConsistencyCheck(int(calm.sum()), int(windy.sum()), len(frames))
 
 
+RecomputeReason = Literal["clipped", "fallback_weather", "inconsistent"]
+RecomputeOutcome = Literal["resolved", "persisted", "failed"]
+
+
 @dataclass(frozen=True, slots=True)
 class RecomputeInfo:
-    """What the agent's analysis decided, for the explanation step."""
+    """What the agent's analysis decided, for the explanation step.
+
+    `reasons`/`outcome` are English prose (LLM facts, English template); the codes let the
+    Russian template phrase the same decision without translating free text.
+    """
 
     performed: bool
     reasons: list[str] = field(default_factory=list)
     outcome: str = ""
+    reason_codes: list[RecomputeReason] = field(default_factory=list)
+    outcome_code: RecomputeOutcome | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -147,6 +158,7 @@ class ExplanationInput:
     horizon_hours: int
     warning_count: int
     recompute: RecomputeInfo = field(default_factory=lambda: RecomputeInfo(performed=False))
+    language: Literal["en", "ru"] = "en"
 
 
 def _level(average: float) -> str:
@@ -174,59 +186,180 @@ def _low_output_window(fleet: pd.Series) -> tuple[pd.Timestamp, pd.Timestamp] | 
     return fleet.index[best[0]], fleet.index[best[1] - 1]
 
 
-def build_explanation(data: ExplanationInput) -> tuple[str, int]:
-    """Return (explanation, number_of_signals_used)."""
+@dataclass(frozen=True, slots=True)
+class _Signals:
+    """Language-neutral facts the template explanation is written from."""
+
+    level: Literal["high", "moderate", "low"]
+    average: float
+    minimum: float
+    maximum: float
+    correlation: float | None
+    peak_time: pd.Timestamp
+    peak_wind: float | None
+    low_window: tuple[pd.Timestamp, pd.Timestamp] | None
+    comparison: tuple[int, int, float] | None  # (leader, lagger, gap) when the turbines differ
+    turbines_equal: bool
+    cold_mean_temperature: float | None
+    recompute: RecomputeInfo
+    warning_count: int
+
+
+def _signals(data: ExplanationInput) -> _Signals:
     frames = pd.concat(data.predictions.values(), ignore_index=True)
-    fleet = _fleet_series(data.predictions)
     summary = data.summary
-    sentences: list[str] = []
-
-    sentences.append(
-        f"Over the next {data.horizon_hours} hours the agent expects {_level(summary.average_power)} "
-        f"generation, averaging {summary.average_power:.0%} of rated capacity "
-        f"(range {summary.min_power:.0%}–{summary.max_power:.0%})."
-    )
-
+    correlation: float | None = None
+    peak_wind: float | None = None
     if frames["wind_speed"].std() > 0 and frames["predicted_power"].std() > 0:
         correlation = float(np.corrcoef(frames["wind_speed"], frames["predicted_power"])[0, 1])
-        peak_wind = frames.loc[frames["timestamp"] == summary.peak_hour, "wind_speed"].mean()
-        sentences.append(
-            f"Output follows wind speed closely (r = {correlation:.2f}); the peak is forecast for "
-            f"{_fmt_time(pd.Timestamp(summary.peak_hour))} when wind reaches about {peak_wind:.1f} m/s."
-        )
+        peak_wind = float(frames.loc[frames["timestamp"] == summary.peak_hour, "wind_speed"].mean())
 
-    low_window = _low_output_window(fleet)
-    if low_window is not None:
-        sentences.append(
-            f"A low-output window is expected from {_fmt_time(low_window[0])} to "
-            f"{_fmt_time(low_window[1])} as wind drops toward the cut-in range."
-        )
-
+    comparison: tuple[int, int, float] | None = None
+    turbines_equal = False
     if len(data.predictions) == 2:
-        first, second = (data.predictions[i]["predicted_power"].mean() for i in (1, 2))
+        first, second = (float(data.predictions[i]["predicted_power"].mean()) for i in (1, 2))
         if first > 0 and abs(second - first) / first >= 0.03:
-            leader, lagger = ("Turbine 1", "Turbine 2") if first > second else ("Turbine 2", "Turbine 1")
-            gap = abs(second - first) / min(first, second)
-            sentences.append(f"{leader} is expected to out-produce {lagger} by about {gap:.0%}.")
+            leader, lagger = (1, 2) if first > second else (2, 1)
+            comparison = (leader, lagger, abs(second - first) / min(first, second))
         else:
-            sentences.append("Both turbines are expected to perform almost identically.")
+            turbines_equal = True
 
     mean_temperature = float(frames["temperature"].mean())
-    if mean_temperature <= -5:
+    return _Signals(
+        level=_level(summary.average_power),  # type: ignore[arg-type]
+        average=summary.average_power,
+        minimum=summary.min_power,
+        maximum=summary.max_power,
+        correlation=correlation,
+        peak_time=pd.Timestamp(summary.peak_hour),
+        peak_wind=peak_wind,
+        low_window=_low_output_window(_fleet_series(data.predictions)),
+        comparison=comparison,
+        turbines_equal=turbines_equal,
+        cold_mean_temperature=mean_temperature if mean_temperature <= -5 else None,
+        recompute=data.recompute,
+        warning_count=data.warning_count,
+    )
+
+
+def build_explanation(data: ExplanationInput) -> tuple[str, int]:
+    """Return (explanation, number_of_signals_used) in the requested language."""
+    signals = _signals(data)
+    sentences = _sentences_ru(signals, data.horizon_hours) if data.language == "ru" else _sentences_en(signals, data.horizon_hours)
+    return " ".join(sentences), len(sentences)
+
+
+def _sentences_en(sig: _Signals, horizon_hours: int) -> list[str]:
+    sentences = [
+        f"Over the next {horizon_hours} hours the agent expects {sig.level} generation, averaging "
+        f"{sig.average:.0%} of rated capacity (range {sig.minimum:.0%}–{sig.maximum:.0%})."
+    ]
+    if sig.correlation is not None and sig.peak_wind is not None:
         sentences.append(
-            f"Cold air (mean {mean_temperature:.0f} °C) is denser, which slightly lifts output at a given wind speed."
+            f"Output follows wind speed closely (r = {sig.correlation:.2f}); the peak is forecast for "
+            f"{_fmt_time(sig.peak_time)} when wind reaches about {sig.peak_wind:.1f} m/s."
         )
-
-    sentences.append(_recompute_sentence(data.recompute))
-
-    if data.warning_count:
+    if sig.low_window is not None:
         sentences.append(
-            f"{data.warning_count} operational warning(s) were raised — review them before dispatch planning."
+            f"A low-output window is expected from {_fmt_time(sig.low_window[0])} to "
+            f"{_fmt_time(sig.low_window[1])} as wind drops toward the cut-in range."
+        )
+    if sig.comparison is not None:
+        leader, lagger, gap = sig.comparison
+        sentences.append(f"Turbine {leader} is expected to out-produce Turbine {lagger} by about {gap:.0%}.")
+    elif sig.turbines_equal:
+        sentences.append("Both turbines are expected to perform almost identically.")
+    if sig.cold_mean_temperature is not None:
+        sentences.append(
+            f"Cold air (mean {sig.cold_mean_temperature:.0f} °C) is denser, which slightly lifts output at a given wind speed."
+        )
+    sentences.append(_recompute_sentence(sig.recompute))
+    if sig.warning_count:
+        sentences.append(
+            f"{sig.warning_count} operational warning(s) were raised — review them before dispatch planning."
         )
     else:
         sentences.append("All values stay within normalized physical bounds and no operational anomalies were found.")
+    return sentences
 
-    return " ".join(sentences), len(sentences)
+
+_RU_MONTHS = ("января", "февраля", "марта", "апреля", "мая", "июня",
+              "июля", "августа", "сентября", "октября", "ноября", "декабря")
+_RU_LEVELS = {"high": "высокую", "moderate": "умеренную", "low": "низкую"}
+_RU_REASONS: dict[str, str] = {
+    "clipped": "часть значений вышла за пределы [0, 1] и была обрезана",
+    "fallback_weather": "прогноз строился на резервной погоде, а основной источник снова стал доступен",
+    "inconsistent": "заметная доля часов противоречила скорости ветра",
+}
+_RU_OUTCOMES: dict[str, str] = {
+    "resolved": "пересчитанный прогноз прошёл все проверки и заменил первый.",
+    "persisted": "после пересчёта причина сохранилась, поэтому к прогнозу стоит отнестись с осторожностью.",
+    "failed": "пересчёт не удался, поэтому сохранён исходный проверенный прогноз.",
+}
+
+
+def _ru_time(value: pd.Timestamp) -> str:
+    return f"{value.day} {_RU_MONTHS[value.month - 1]}, {value:%H:%M}"
+
+
+def _ru_num(value: float, digits: int) -> str:
+    return f"{value:.{digits}f}".replace(".", ",").replace("-", "−")
+
+
+def _ru_pct(value: float) -> str:
+    return f"{round(value * 100)}%"
+
+
+def _ru_plural(count: int, one: str, few: str, many: str) -> str:
+    mod10, mod100 = count % 10, count % 100
+    if mod10 == 1 and mod100 != 11:
+        return one
+    if 2 <= mod10 <= 4 and not 12 <= mod100 <= 14:
+        return few
+    return many
+
+
+def _sentences_ru(sig: _Signals, horizon_hours: int) -> list[str]:
+    sentences = [
+        f"На ближайшие {horizon_hours} ч агент ожидает {_RU_LEVELS[sig.level]} выработку: в среднем "
+        f"{_ru_pct(sig.average)} от номинальной мощности (диапазон {_ru_pct(sig.minimum)}–{_ru_pct(sig.maximum)})."
+    ]
+    if sig.correlation is not None and sig.peak_wind is not None:
+        sentences.append(
+            f"Выработка тесно следует за скоростью ветра (r = {_ru_num(sig.correlation, 2)}); пик ожидается "
+            f"{_ru_time(sig.peak_time)}, при ветре около {_ru_num(sig.peak_wind, 1)} м/с."
+        )
+    if sig.low_window is not None:
+        sentences.append(
+            f"Окно низкой выработки ожидается с {_ru_time(sig.low_window[0])} до {_ru_time(sig.low_window[1])}: "
+            "ветер ослабевает до порога включения турбин."
+        )
+    if sig.comparison is not None:
+        leader, lagger, gap = sig.comparison
+        sentences.append(f"Турбина {leader}, по прогнозу, выработает примерно на {_ru_pct(gap)} больше, чем турбина {lagger}.")
+    elif sig.turbines_equal:
+        sentences.append("Обе турбины, по прогнозу, будут работать практически одинаково.")
+    if sig.cold_mean_temperature is not None:
+        sentences.append(
+            f"Холодный воздух (в среднем {_ru_num(sig.cold_mean_temperature, 0)} °C) плотнее, что немного повышает "
+            "выработку при той же скорости ветра."
+        )
+    if not sig.recompute.performed:
+        sentences.append(
+            "Самопроверка агента не нашла причин для пересчёта: нет значений вне диапазона, резервной погоды "
+            "и физически противоречивых часов."
+        )
+    else:
+        reasons = "; ".join(_RU_REASONS[code] for code in sig.recompute.reason_codes) or "самопроверка выявила проблему"
+        outcome = _RU_OUTCOMES.get(sig.recompute.outcome_code or "", "")
+        sentences.append(f"Агент один раз пересчитал прогноз, потому что {reasons}, — {outcome}")
+    if sig.warning_count:
+        noun = _ru_plural(sig.warning_count, "эксплуатационное предупреждение", "эксплуатационных предупреждения",
+                          "эксплуатационных предупреждений")
+        sentences.append(f"Выявлено {sig.warning_count} {noun} — проверьте их перед планированием диспетчеризации.")
+    else:
+        sentences.append("Все значения в пределах физических границ, эксплуатационных аномалий не обнаружено.")
+    return sentences
 
 
 def _recompute_sentence(recompute: RecomputeInfo) -> str:

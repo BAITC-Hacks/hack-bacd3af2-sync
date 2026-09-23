@@ -1,9 +1,12 @@
 import { cn } from "@/shared/lib";
 
+import { SeriesMarker } from "./SeriesMarker";
+
 export type ChartLegendItem = {
   key: string;
   label: string;
   color: string;
+  shape: "dot" | "ring";
 };
 
 type ChartLegendProps = {
@@ -13,10 +16,10 @@ type ChartLegendProps = {
 
 export function ChartLegend({ items, className }: ChartLegendProps) {
   return (
-    <ul className={cn("flex flex-wrap items-center gap-x-4 gap-y-1", className)} aria-label="Chart legend">
+    <ul className={cn("flex flex-wrap items-center gap-x-7 gap-y-1", className)} aria-label="Легенда графика">
       {items.map((item) => (
-        <li key={item.key} className="flex items-center gap-2 text-xs text-ink-muted">
-          <span aria-hidden className="h-0.5 w-4 rounded-full" style={{ backgroundColor: item.color }} />
+        <li key={item.key} className="flex items-center gap-2 text-[13px] text-ink-muted">
+          <SeriesMarker color={item.color} shape={item.shape} />
           {item.label}
         </li>
       ))}

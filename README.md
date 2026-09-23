@@ -266,7 +266,7 @@ Timestamps are naive Asia/Almaty wall-clock times. The real model numbers `horiz
 | `WEATHER_PROVIDER` | `mock` (Docker: `open_meteo`) | `open_meteo` = live weather, falls back to synthetic if unreachable |
 | `OPENAI_API_KEY` | empty | Enables LLM explanations; empty = template |
 | `OPENAI_MODEL` | `gpt-4o-mini` | LLM for the explanation step |
-| `EXPLANATION_LANGUAGE` | `en` | `en` or `ru` |
+| `EXPLANATION_LANGUAGE` | `ru` | Language of the LLM explanation: `ru` (default, matches the Russian UI) or `en` |
 | `TURBINE_MODEL_DIR` / `ML_PACKAGE_DIR` | `<repo>/ml/models` / `<repo>/ml` | Override model and ML package locations |
 | `CORS_ORIGINS` | `http://localhost:5173` | Allowed frontend origins |
 

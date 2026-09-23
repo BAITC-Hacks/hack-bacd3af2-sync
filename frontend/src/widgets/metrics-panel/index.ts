@@ -1,1 +1,1 @@
-export { MetricsPanel } from "./ui/MetricsPanel";
+export { ModelMetrics } from "./ui/MetricsPanel";

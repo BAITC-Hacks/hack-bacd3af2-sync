@@ -1,91 +1,129 @@
-import { Sparkles } from "lucide-react";
-import { motion } from "motion/react";
+import { ArrowRight, Sparkles, TriangleAlert } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useId, useMemo, useState } from "react";
 
 import { WEATHER_SOURCE_LABELS, type ExplanationSource, type ForecastResponse } from "@/entities/forecast";
 import { baseTransition } from "@/shared/config";
-import { formatRelativeTime } from "@/shared/lib";
-import { Badge, Card, CardHeader, Skeleton } from "@/shared/ui";
+import { cn, formatRelativeTime } from "@/shared/lib";
+import { Card, CardHeader, Skeleton } from "@/shared/ui";
 
-import { WarningList } from "./WarningList";
+import { deriveInsightTags, type InsightTag } from "../model/insightTags";
 
 type AiExplanationProps = {
   forecast: ForecastResponse | undefined;
   isLoading: boolean;
 };
 
-/** Split on sentence-ending punctuation followed by whitespace, so decimals like "0.98" stay intact. */
-const EXPLANATION_SOURCE_LABELS: Record<ExplanationSource, string> = {
+const SOURCE_LABELS: Record<ExplanationSource, string> = {
   llm: "LLM (OpenAI)",
-  template: "Template (LLM off)",
+  template: "Шаблон (LLM выключен)",
 };
 
-function splitSentences(text: string): string[] {
-  return text.split(/(?<=[.!?])\s+/).filter(Boolean);
-}
+const TAG_TONES: Record<InsightTag["tone"], string> = {
+  neutral: "border-line-strong text-ink-muted",
+  good: "border-sage/30 text-sage",
+  warning: "border-gold/35 text-gold",
+};
 
 export function AiExplanation({ forecast, isLoading }: AiExplanationProps) {
-  const sentences = forecast ? splitSentences(forecast.explanation) : [];
+  const [open, setOpen] = useState(false);
+  const detailsId = useId();
+  const tags = useMemo(() => (forecast ? deriveInsightTags(forecast) : []), [forecast]);
 
   return (
-    <Card aria-labelledby="explanation-title">
+    <Card aria-labelledby="explanation-title" className="flex h-full flex-col">
       <CardHeader
         titleId="explanation-title"
-        title="AI explanation"
-        description="What the agent concluded from this run"
-        icon={<Sparkles className="size-4" aria-hidden />}
+        title="Объяснение ИИ"
+        icon={<Sparkles className="size-5" strokeWidth={1.4} aria-hidden />}
+        className="mb-3"
         action={
-          forecast?.warnings.length ? (
-            <Badge tone="warning">{forecast.warnings.length} warning(s)</Badge>
+          forecast ? (
+            <button
+              type="button"
+              onClick={() => setOpen((value) => !value)}
+              aria-expanded={open}
+              aria-controls={detailsId}
+              aria-label={open ? "Скрыть подробности" : "Показать подробности"}
+              className="grid size-8 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-panel-soft hover:text-ink"
+            >
+              <ArrowRight className={cn("size-[18px] transition-transform", open && "rotate-90")} strokeWidth={1.5} />
+            </button>
           ) : null
         }
       />
 
       {isLoading ? (
-        <div className="space-y-2.5">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-11/12" />
-          <Skeleton className="h-4 w-4/6" />
+        <div className="space-y-2">
+          <Skeleton className="h-3.5 w-full" />
+          <Skeleton className="h-3.5 w-11/12" />
+          <Skeleton className="h-3.5 w-3/4" />
         </div>
       ) : forecast ? (
-        <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-          <p key={forecast.generatedAt} className="text-[15px] leading-7 text-ink">
-            {sentences.map((sentence, index) => (
-              <motion.span
-                key={`${index}-${sentence}`}
-                initial={{ opacity: 0, filter: "blur(4px)" }}
-                animate={{ opacity: 1, filter: "blur(0px)" }}
-                transition={{ ...baseTransition, delay: 0.15 + index * 0.18 }}
-              >
-                {sentence}{" "}
-              </motion.span>
+        <>
+          <motion.p
+            key={forecast.generatedAt}
+            className="text-[13.5px] leading-[1.65] text-ink/85"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ ...baseTransition, delay: 0.1 }}
+          >
+            {forecast.explanation}
+          </motion.p>
+
+          <ul className="mt-auto flex flex-wrap gap-2 pt-4" aria-label="Ключевые выводы">
+            {tags.map((tag) => (
+              <li key={tag.key} className={cn("rounded-full border px-3 py-1 text-[12px]", TAG_TONES[tag.tone])}>
+                {tag.label}
+              </li>
             ))}
-          </p>
-          <div className="space-y-4">
-            <WarningList warnings={forecast.warnings} />
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 border-t border-line pt-4 text-xs">
-              <dt className="text-ink-subtle">Written by</dt>
-              <dd className="text-ink-muted">{EXPLANATION_SOURCE_LABELS[forecast.explanationSource ?? "template"]}</dd>
-              <dt className="text-ink-subtle">Model</dt>
-              <dd className="font-mono text-ink-muted">{forecast.modelVersion ?? "—"}</dd>
-              <dt className="text-ink-subtle">Weather</dt>
-              <dd className="text-ink-muted">
-                {forecast.weatherSource ? (WEATHER_SOURCE_LABELS[forecast.weatherSource] ?? forecast.weatherSource) : "—"}
-              </dd>
-              <dt className="text-ink-subtle">Generated</dt>
-              <dd className="text-ink-muted">{formatRelativeTime(forecast.generatedAt)}</dd>
-            </dl>
-          </div>
-        </div>
+          </ul>
+
+          <AnimatePresence initial={false}>
+            {open ? (
+              <motion.div
+                id={detailsId}
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-4 space-y-3 border-t border-line pt-3">
+                  {forecast.warnings.length > 0 ? (
+                    <ul className="space-y-1.5" aria-label="Предупреждения">
+                      {forecast.warnings.map((warning) => (
+                        <li key={warning} className="flex gap-2 text-[12.5px] text-ink/85">
+                          <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-gold" aria-hidden />
+                          <span>
+                            <span className="sr-only">Предупреждение: </span>
+                            {warning}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[11.5px]">
+                    <dt className="text-ink-subtle">Автор текста</dt>
+                    <dd className="text-ink-muted">{SOURCE_LABELS[forecast.explanationSource ?? "template"]}</dd>
+                    <dt className="text-ink-subtle">Модель</dt>
+                    <dd className="font-mono text-[11px] break-all text-ink-muted">{forecast.modelVersion ?? "—"}</dd>
+                    <dt className="text-ink-subtle">Погода</dt>
+                    <dd className="text-ink-muted">
+                      {forecast.weatherSource ? (WEATHER_SOURCE_LABELS[forecast.weatherSource] ?? forecast.weatherSource) : "—"}
+                    </dd>
+                    <dt className="text-ink-subtle">Сформировано</dt>
+                    <dd className="text-ink-muted">{formatRelativeTime(forecast.generatedAt)}</dd>
+                  </dl>
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+        </>
       ) : (
-        <motion.p
-          className="text-sm text-ink-muted"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={baseTransition}
-        >
-          After the run, the agent summarises expected generation, links it to wind conditions, highlights
-          low-output windows and flags operational anomalies.
-        </motion.p>
+        <p className="text-[13.5px] leading-relaxed text-ink-muted">
+          После запуска агент объяснит ожидаемую выработку, свяжет её с ветром, выделит окна низкой выработки и отметит эксплуатационные аномалии.
+        </p>
       )}
     </Card>
   );

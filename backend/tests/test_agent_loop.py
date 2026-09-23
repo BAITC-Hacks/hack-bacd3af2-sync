@@ -397,3 +397,37 @@ def test_consistency_check_counts_calm_and_windy_contradictions() -> None:
     check = check_physical_consistency({1: frame})
     assert (check.calm_but_producing, check.windy_but_idle, check.total_hours) == (1, 1, 5)
     assert check.share == pytest.approx(0.4)
+
+
+# --- Russian template explanation (EXPLANATION_LANGUAGE=ru, no LLM key) ------------------
+
+def _no_english_words(text: str) -> bool:
+    import re
+
+    # Allowed Latin tokens: the correlation symbol "r".
+    return not [word for word in re.findall(r"[A-Za-z]{2,}", text)]
+
+
+def test_russian_template_explanation_for_a_clean_run() -> None:
+    response = _run(ForecastAgent(_mock_weather(), _CountingModel(), explanation_language="ru"))
+
+    assert response.explanation_source == "template"
+    assert response.explanation.startswith("На ближайшие 24 ч агент ожидает")
+    assert "Самопроверка агента не нашла причин для пересчёта" in response.explanation
+    assert _no_english_words(response.explanation), response.explanation
+
+
+def test_russian_template_explains_a_resolved_recompute() -> None:
+    model = _CountingModel(bad_calls=TURBINE_COUNT)
+    response = _run(ForecastAgent(_mock_weather(), model, explanation_language="ru"))
+
+    assert "Агент один раз пересчитал прогноз, потому что часть значений вышла за пределы [0, 1]" in response.explanation
+    assert "пересчитанный прогноз прошёл все проверки" in response.explanation
+    assert _no_english_words(response.explanation), response.explanation
+
+
+def test_russian_template_explains_a_failed_recompute() -> None:
+    model = _CountingModel(bad_calls=TURBINE_COUNT, crash_after=TURBINE_COUNT)
+    response = _run(ForecastAgent(_mock_weather(), model, explanation_language="ru"))
+
+    assert "пересчёт не удался, поэтому сохранён исходный проверенный прогноз" in response.explanation

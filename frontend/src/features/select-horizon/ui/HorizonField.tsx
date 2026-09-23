@@ -1,4 +1,4 @@
-import { Clock } from "lucide-react";
+import { Clock3 } from "lucide-react";
 import { useId } from "react";
 
 import { HORIZON_OPTIONS, type HorizonHours } from "@/entities/forecast";
@@ -6,7 +6,7 @@ import { Field, SegmentedControl, type SegmentOption } from "@/shared/ui";
 
 const OPTIONS: readonly SegmentOption<HorizonHours>[] = HORIZON_OPTIONS.map((hours) => ({
   value: hours,
-  label: `${hours}h`,
+  label: `${hours} ч`,
 }));
 
 type HorizonFieldProps = {
@@ -18,13 +18,15 @@ type HorizonFieldProps = {
 export function HorizonField({ value, onChange, disabled }: HorizonFieldProps) {
   const labelId = useId();
   return (
-    <Field label="Horizon" labelId={labelId} icon={<Clock className="size-3.5" aria-hidden />}>
+    <Field label="Горизонт" labelId={labelId} icon={<Clock3 className="size-5" strokeWidth={1.4} />}>
       <SegmentedControl
         value={value}
         options={OPTIONS}
         onValueChange={onChange}
         ariaLabelledBy={labelId}
         disabled={disabled}
+        size="sm"
+        className="max-w-[170px]"
       />
     </Field>
   );

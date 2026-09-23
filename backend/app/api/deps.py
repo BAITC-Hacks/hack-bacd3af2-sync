@@ -62,6 +62,7 @@ def get_forecast_service() -> ForecastService:
         weather_service=get_weather_service(),
         model_adapter=get_model_adapter(),
         explainer=get_explainer(),
+        explanation_language=get_settings().explanation_language,
     )
     return ForecastService(agent)
 

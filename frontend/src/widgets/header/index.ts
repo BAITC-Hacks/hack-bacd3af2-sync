@@ -1,1 +1,1 @@
-export { Header } from "./ui/Header";
+export { Header, MobileHeader } from "./ui/Header";

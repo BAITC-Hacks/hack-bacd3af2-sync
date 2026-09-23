@@ -19,7 +19,7 @@ function clampToRange(value: string): string {
 export function ForecastDateField({ value, onChange, disabled }: ForecastDateFieldProps) {
   const inputId = useId();
   return (
-    <Field label="Forecast date" htmlFor={inputId} icon={<CalendarDays className="size-3.5" aria-hidden />}>
+    <Field label="Дата прогноза" htmlFor={inputId} icon={<CalendarDays className="size-5" strokeWidth={1.4} />}>
       <DateInput
         id={inputId}
         value={value}

@@ -6,7 +6,7 @@ type SpinnerProps = {
   label?: string;
 };
 
-export function Spinner({ size = "md", className, label = "Loading" }: SpinnerProps) {
+export function Spinner({ size = "md", className, label = "Загрузка" }: SpinnerProps) {
   return (
     <span
       role="status"

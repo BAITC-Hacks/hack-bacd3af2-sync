@@ -59,14 +59,14 @@ export async function apiRequest<T>(path: string, { method = "GET", body, signal
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "TimeoutError") {
-      throw new ApiError(0, "The WindAI backend did not respond in time. Please try again.");
+      throw new ApiError(0, "Сервер WindAI не ответил вовремя. Попробуйте ещё раз.");
     }
-    throw new ApiError(0, `Cannot reach the WindAI backend at ${API_BASE_URL}. Is it running?`);
+    throw new ApiError(0, `Не удаётся подключиться к серверу WindAI (${API_BASE_URL}). Он запущен?`);
   }
 
   const payload = await readJson(response);
   if (!response.ok) {
-    throw new ApiError(response.status, extractErrorMessage(payload, `Request failed with status ${response.status}.`));
+    throw new ApiError(response.status, extractErrorMessage(payload, `Запрос завершился с ошибкой ${response.status}.`));
   }
   return payload as T;
 }

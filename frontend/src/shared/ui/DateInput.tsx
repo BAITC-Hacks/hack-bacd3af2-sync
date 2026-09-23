@@ -17,7 +17,11 @@ export function DateInput({ value, onValueChange, className, ...props }: DateInp
       onChange={(event) => {
         if (event.target.value) onValueChange(event.target.value);
       }}
-      className={cn(controlBase, "tabular-nums [color-scheme:dark]", className)}
+      className={cn(
+        controlBase,
+        "tabular-nums [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:[filter:sepia(0.6)_saturate(0.6)]",
+        className,
+      )}
       {...props}
     />
   );

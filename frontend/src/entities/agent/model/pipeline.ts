@@ -11,15 +11,20 @@ type PipelineStage = {
  * Titles match the backend; statuses always come from the backend response.
  */
 export const AGENT_PIPELINE: readonly PipelineStage[] = [
-  { id: "fetch_weather", title: "Fetch weather forecast", description: "Hourly wind speed & temperature per turbine" },
-  { id: "validate_weather", title: "Validate weather data", description: "Schema, continuity, physical ranges, gap repair" },
-  { id: "prepare_features", title: "Prepare model inputs", description: "Contract-shaped frames for the ML model" },
-  { id: "run_model", title: "Run ML model", description: "Hourly normalized power per turbine" },
-  { id: "validate_prediction", title: "Validate prediction", description: "NaN, [0, 1] bounds, horizon, anomalies" },
-  { id: "analyze_result", title: "Analyze result", description: "Self-check: clipping, fallback weather, physics" },
-  { id: "recompute", title: "Recompute forecast", description: "One re-run on fresh input, only if needed" },
-  { id: "generate_explanation", title: "Generate explanation", description: "Narrative summary of the forecast" },
+  { id: "fetch_weather", title: "Получение прогноза погоды", description: "Почасовые скорость ветра и температура для каждой турбины" },
+  { id: "validate_weather", title: "Проверка погодных данных", description: "Схема, непрерывность, физические диапазоны, заполнение пропусков" },
+  { id: "prepare_features", title: "Подготовка входных данных", description: "Таблицы по контракту для ML-модели" },
+  { id: "run_model", title: "Запуск ML-модели", description: "Почасовая нормированная мощность по турбинам" },
+  { id: "validate_prediction", title: "Проверка прогноза", description: "NaN, границы [0, 1], горизонт, аномалии" },
+  { id: "analyze_result", title: "Анализ результата", description: "Самопроверка: обрезка, резервная погода, физика" },
+  { id: "recompute", title: "Повторный расчёт", description: "Один перезапуск на свежих данных — только при необходимости" },
+  { id: "generate_explanation", title: "Формирование объяснения", description: "Текстовый вывод по результатам прогноза" },
 ];
+
+/** Russian step title by id (the backend reports titles in English). */
+export function stepTitle(id: AgentStepId, fallback: string): string {
+  return AGENT_PIPELINE.find((stage) => stage.id === id)?.title ?? fallback;
+}
 
 export function planAsPendingSteps(): AgentStep[] {
   return AGENT_PIPELINE.map((stage) => ({

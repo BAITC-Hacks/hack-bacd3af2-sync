@@ -45,7 +45,8 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
     openai_timeout_s: float = Field(default=10.0, gt=0)
-    explanation_language: Literal["en", "ru"] = "en"
+    # The dashboard is in Russian, so LLM explanations default to Russian.
+    explanation_language: Literal["en", "ru"] = "ru"
 
     @property
     def llm_enabled(self) -> bool:

@@ -11,6 +11,7 @@ import pandas as pd
 
 from app.schemas.agent import AgentStep, AgentStepId, AgentStepStatus
 from app.schemas.forecast import ForecastRequest, ForecastSummary
+from app.services.analysis_service import RecomputeOutcome, RecomputeReason
 from app.services.weather_service import WeatherBatch
 
 logger = logging.getLogger(__name__)
@@ -69,6 +70,8 @@ class AgentContext:
     clipped_values: int = 0
     # Decisions of analyze_result / outcome of recompute.
     recompute_reasons: list[str] = field(default_factory=list)
+    recompute_codes: list[RecomputeReason] = field(default_factory=list)
+    recompute_outcome_code: RecomputeOutcome | None = None
     refreshed_weather: WeatherBatch | None = None
     recompute_performed: bool = False
     recompute_outcome: str = ""

@@ -20,12 +20,14 @@ export {
 } from "./model/constants";
 export {
   buildChartRows,
+  buildSiteAverageRows,
   computeGenerationOutlook,
   computeTurbineStats,
   hourlyTicks,
   paddedDomain,
   seriesKey,
   type ChartRow,
+  type SiteRow,
   type GenerationOutlook,
   type SeriesKey,
   type TurbineStats,

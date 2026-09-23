@@ -1,14 +1,17 @@
-import { CloudSun } from "lucide-react";
+import { Cloud } from "lucide-react";
 import { motion } from "motion/react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
-import { buildChartRows, type ForecastResponse } from "@/entities/forecast";
-import { TURBINES } from "@/entities/turbine";
+import { buildSiteAverageRows, type ForecastResponse } from "@/entities/forecast";
 import { baseTransition } from "@/shared/config";
-import { Card, CardHeader, EmptyState, Skeleton } from "@/shared/ui";
-import { ChartLegend } from "@/shared/ui/chart";
+import { Card, CardHeader, EmptyState, SegmentedControl, Skeleton, type SegmentOption } from "@/shared/ui";
 
-import { WeatherMiniChart } from "./WeatherMiniChart";
+import { WeatherChart, type WeatherMetric } from "./WeatherChart";
+
+const TABS: readonly SegmentOption<WeatherMetric>[] = [
+  { value: "wind", label: "Ветер" },
+  { value: "temperature", label: "Температура" },
+];
 
 type WeatherPanelProps = {
   forecast: ForecastResponse | undefined;
@@ -16,65 +19,55 @@ type WeatherPanelProps = {
 };
 
 export function WeatherPanel({ forecast, isLoading }: WeatherPanelProps) {
+  const [metric, setMetric] = useState<WeatherMetric>("wind");
   const turbines = forecast?.turbines ?? [];
-  const windRows = useMemo(() => buildChartRows(turbines, "windSpeed"), [turbines]);
-  const temperatureRows = useMemo(() => buildChartRows(turbines, "temperature"), [turbines]);
-  const turbineIds = turbines.map((turbine) => turbine.turbineId);
-  const hasData = windRows.length > 0 && forecast !== undefined;
+  const rows = useMemo(
+    () => buildSiteAverageRows(turbines, metric === "wind" ? "windSpeed" : "temperature"),
+    [turbines, metric],
+  );
+  const hasData = rows.length > 0 && forecast !== undefined;
 
   return (
-    <Card className="h-full" aria-labelledby="weather-title">
+    <Card aria-labelledby="weather-title" className="flex h-full flex-col">
       <CardHeader
         titleId="weather-title"
-        title="Weather features"
-        description="Model inputs at each turbine location"
-        icon={<CloudSun className="size-4" aria-hidden />}
+        title="Прогноз погоды"
+        description="Почасовые погодные условия на площадке"
+        icon={<Cloud className="size-5" strokeWidth={1.4} aria-hidden />}
         action={
-          hasData && turbineIds.length > 1 ? (
-            <ChartLegend
-              items={turbineIds.map((id) => ({ key: String(id), label: TURBINES[id].name, color: TURBINES[id].color }))}
-            />
-          ) : null
+          <SegmentedControl
+            value={metric}
+            options={TABS}
+            onValueChange={setMetric}
+            ariaLabel="Погодный параметр"
+            variant="subtle"
+            size="sm"
+            className="w-auto"
+          />
         }
       />
-      {isLoading ? (
-        <div className="space-y-5">
-          <Skeleton className="h-40" />
-          <Skeleton className="h-40" />
-        </div>
-      ) : hasData ? (
-        <motion.div
-          key={forecast.generatedAt}
-          className="space-y-5"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={baseTransition}
-        >
-          <WeatherMiniChart
-            title="Wind speed"
-            unit="m/s"
-            rows={windRows}
-            turbineIds={turbineIds}
-            horizonHours={forecast.horizonHours}
-            domainPadding={1}
+      <div className="min-h-[150px] flex-1">
+        {isLoading ? (
+          <Skeleton className="h-full min-h-[150px]" />
+        ) : hasData ? (
+          <motion.div
+            key={`${forecast.generatedAt}-${metric}`}
+            className="h-full min-h-[150px]"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={baseTransition}
+          >
+            <WeatherChart metric={metric} rows={rows} horizonHours={forecast.horizonHours} />
+          </motion.div>
+        ) : (
+          <EmptyState
+            className="min-h-[150px] py-4"
+            icon={<Cloud className="size-6" strokeWidth={1.4} aria-hidden />}
+            title="Погода не загружена"
+            description="Во время запуска агент получает почасовые скорость ветра и температуру."
           />
-          <WeatherMiniChart
-            title="Temperature"
-            unit="°C"
-            rows={temperatureRows}
-            turbineIds={turbineIds}
-            horizonHours={forecast.horizonHours}
-            domainPadding={2}
-          />
-        </motion.div>
-      ) : (
-        <EmptyState
-          className="min-h-80"
-          icon={<CloudSun className="size-5" aria-hidden />}
-          title="No weather loaded"
-          description="The agent retrieves hourly wind speed and temperature for each turbine during a run."
-        />
-      )}
+        )}
+      </div>
     </Card>
   );
 }

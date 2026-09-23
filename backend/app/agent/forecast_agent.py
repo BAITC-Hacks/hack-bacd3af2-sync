@@ -13,6 +13,7 @@ actually happened.
 
 import asyncio
 import logging
+from typing import Literal
 
 import pandas as pd
 
@@ -94,10 +95,12 @@ class ForecastAgent:
         weather_service: WeatherService,
         model_adapter: ModelAdapter,
         explainer: ForecastExplainer | None = None,
+        explanation_language: Literal["en", "ru"] = "en",
     ) -> None:
         self._weather = weather_service
         self._model = model_adapter
         self._explainer = explainer
+        self._language = explanation_language
         self._handlers: dict[AgentStepId, StepHandler] = {
             "fetch_weather": self._fetch_weather,
             "validate_weather": self._validate_weather,
@@ -267,12 +270,14 @@ class ForecastAgent:
         """Inspect the validated forecast and decide whether a recompute is warranted."""
         request = context.request
         reasons: list[str] = []
+        codes: list[analysis_service.RecomputeReason] = []
         notes: list[str] = []
 
         if context.clipped_values:
             reasons.append(
                 f"{context.clipped_values} predicted value(s) fell outside [0, 1] and had to be clipped"
             )
+            codes.append("clipped")
 
         if context.weather_fallback_reason:
             try:
@@ -286,6 +291,7 @@ class ForecastAgent:
                     f"the forecast ran on fallback demo weather and {context.refreshed_weather.source} "
                     "answered on retry"
                 )
+                codes.append("fallback_weather")
 
         consistency = analysis_service.check_physical_consistency(context.predictions)
         if consistency.share >= INCONSISTENT_SHARE_TRIGGER:
@@ -294,8 +300,10 @@ class ForecastAgent:
                 f"contradict the wind ({consistency.calm_but_producing} calm but producing, "
                 f"{consistency.windy_but_idle} windy but idle)"
             )
+            codes.append("inconsistent")
 
         context.recompute_reasons = reasons
+        context.recompute_codes = codes
         if reasons:
             return f"Recompute required ({len(reasons)} trigger(s)): {'; '.join(reasons)}."
 
@@ -324,6 +332,7 @@ class ForecastAgent:
                 await self._handlers[current](sub)
         except Exception as exc:  # noqa: BLE001 — any failure keeps the original forecast
             context.recompute_outcome = "the recompute failed, so the original validated forecast was kept."
+            context.recompute_outcome_code = "failed"
             raise StepFailedError(
                 f"Recompute failed at “{STEP_TITLES[current]}”: {exc} — kept the original validated forecast."
             ) from exc
@@ -336,12 +345,14 @@ class ForecastAgent:
         remaining = self._remaining_triggers(sub)
         if remaining:
             context.recompute_outcome = f"the trigger persisted after recompute ({'; '.join(remaining)})."
+            context.recompute_outcome_code = "persisted"
             context.warnings.append(
                 f"Recompute did not remove the trigger ({'; '.join(remaining)}) — treat this forecast with caution."
             )
             return f"Recomputed once on fresh input (weather: {sub.weather_source}).{change} Trigger persists: {'; '.join(remaining)}."
 
         context.recompute_outcome = "the recomputed forecast passed all checks and replaced the first result."
+        context.recompute_outcome_code = "resolved"
         return f"Recomputed once on fresh input (weather: {sub.weather_source}).{change} All triggers resolved."
 
     async def _generate_explanation(self, context: AgentContext) -> str:
@@ -356,7 +367,10 @@ class ForecastAgent:
                 performed=context.recompute_performed,
                 reasons=list(context.recompute_reasons),
                 outcome=context.recompute_outcome,
+                reason_codes=list(context.recompute_codes),
+                outcome_code=context.recompute_outcome_code,
             ),
+            language=self._language,
         )
         template, signals = analysis_service.build_explanation(data)
 
