@@ -46,4 +46,5 @@ export type ForecastResponseDto = {
   explanation: string;
   model_version: string | null;
   weather_source: string | null;
+  explanation_source: "llm" | "template" | null;
 };

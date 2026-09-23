@@ -121,4 +121,4 @@ def test_weather_failure_without_fallback_fails_first_step() -> None:
 
     assert response.status == "failed"
     assert _statuses(response)["fetch_weather"] == "failed"
-    assert list(_statuses(response).values())[1:] == ["skipped"] * 5
+    assert list(_statuses(response).values())[1:] == ["skipped"] * 7

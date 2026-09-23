@@ -85,3 +85,15 @@ export function computeGenerationOutlook(turbines: TurbineForecast[]): Generatio
     lowOutputHours: fleet.filter((value) => value < LOW_OUTPUT).length,
   };
 }
+
+export type SiteRow = { timestamp: string; value: number };
+
+/** Hourly mean of a weather metric across the forecast's turbines (they share the NWP grid cell). */
+export function buildSiteAverageRows(turbines: TurbineForecast[], metric: ForecastMetric): SiteRow[] {
+  return buildChartRows(turbines, metric).map((row) => {
+    const values = turbines
+      .map((turbine) => row[seriesKey(turbine.turbineId)])
+      .filter((value): value is number => value !== undefined);
+    return { timestamp: row.timestamp, value: mean(values) };
+  });
+}

@@ -10,18 +10,18 @@ type Pillar = { icon: ReactNode; title: string; text: string };
 const PILLARS: Pillar[] = [
   {
     icon: <CloudSun className="size-4" aria-hidden />,
-    title: "Weather service",
-    text: "Fetches archived NWP forecasts (Open-Meteo Historical Forecast API) for each turbine location and shapes them into the model contract.",
+    title: "Погодный сервис",
+    text: "Получает почасовую погоду для координат каждой турбины и приводит её к контракту модели. Дашборд использует Open-Meteo Historical Forecast, а строгий бэктест без утечки использует архивные прогоны Single Runs (ECMWF IFS).",
   },
   {
     icon: <Cpu className="size-4" aria-hidden />,
-    title: "ML adapter",
-    text: "A single seam to the model: predict_power(turbine_id, weather, horizon_hours, forecast_origin). Mock today, CatBoost tomorrow — nothing else changes.",
+    title: "ML-адаптер",
+    text: "Единая точка связи с моделью: predict_power(turbine_id, weather, horizon_hours, forecast_origin). Для каждой даты выбирается CatBoost-модель, обученная строго до неё.",
   },
   {
     icon: <ShieldCheck className="size-4" aria-hidden />,
-    title: "Guardrails",
-    text: "Every step validates its output: schema, hourly continuity, physical ranges, NaNs, [0, 1] bounds. The agent repairs, warns or stops.",
+    title: "Контроль качества",
+    text: "Каждый шаг проверяет свой результат: схему, почасовую непрерывность, физические диапазоны, NaN, границы [0, 1]. Агент исправляет данные, предупреждает или останавливается.",
   },
 ];
 
@@ -29,27 +29,27 @@ export function AboutPage() {
   return (
     <div className="mx-auto max-w-4xl py-12 sm:py-16">
       <Reveal>
-        <p className="text-sm font-medium text-accent">How it works</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-          An agent that owns the whole forecasting loop
+        <p className="eyebrow">Методология</p>
+        <h1 className="mt-3 font-display text-[40px] leading-tight text-ink sm:text-[52px]">
+          Агент, который ведёт весь цикл прогноза
         </h1>
         <p className="mt-4 text-ink-muted">
-          WindAI forecasts hourly normalized active power of two wind turbines 24–48 hours ahead. Instead of a single
-          model call, an agent orchestrates data retrieval, validation, inference and explanation — and reports what
-          actually happened at each step.
+          WindAI прогнозирует почасовую нормированную активную мощность двух ветротурбин на 24–48 часов вперёд.
+          Вместо одного вызова модели агент управляет получением данных, проверкой, расчётом, самоанализом и
+          объяснением, и сообщает, что на самом деле произошло на каждом шаге.
         </p>
       </Reveal>
 
       <Reveal delay={0.1}>
         <Card className="mt-10">
-          <h2 className="flex items-center gap-2 text-[15px] font-semibold text-ink">
+          <h2 className="flex items-center gap-2.5 font-display text-[22px] text-ink">
             <BrainCircuit className="size-4 text-accent" aria-hidden />
-            Agent pipeline
+            Конвейер агента
           </h2>
           <ol className="mt-5 grid gap-3 sm:grid-cols-2">
             {AGENT_PIPELINE.map((stage, index) => (
-              <li key={stage.id} className="flex gap-3 rounded-xl border border-line bg-white/[0.02] p-3.5">
-                <span className="grid size-6 shrink-0 place-items-center rounded-full border border-cyan-400/30 bg-cyan-400/10 text-xs font-semibold text-accent tabular-nums">
+              <li key={stage.id} className="flex gap-3 rounded-xl border border-line bg-panel-soft p-3.5">
+                <span className="grid size-6 shrink-0 place-items-center rounded-full border border-cream/30 bg-cream/[0.06] text-xs text-cream tabular-nums">
                   {index + 1}
                 </span>
                 <span>
@@ -66,10 +66,10 @@ export function AboutPage() {
         {PILLARS.map((pillar, index) => (
           <Reveal key={pillar.title} delay={0.18 + index * 0.06}>
             <Card className="h-full">
-              <span className="grid size-9 place-items-center rounded-xl border border-line bg-white/[0.04] text-accent">
+              <span className="text-cream/80">
                 {pillar.icon}
               </span>
-              <h3 className="mt-4 text-sm font-semibold text-ink">{pillar.title}</h3>
+              <h3 className="mt-3 font-display text-[19px] text-ink">{pillar.title}</h3>
               <p className="mt-1.5 text-sm text-ink-muted">{pillar.text}</p>
             </Card>
           </Reveal>
@@ -79,9 +79,9 @@ export function AboutPage() {
       <Reveal delay={0.4}>
         <Link
           to="/forecast"
-          className="mt-10 inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-cyan-200"
+          className="mt-10 inline-flex items-center gap-2 text-sm font-medium text-cream hover:text-cream-strong"
         >
-          Run a forecast <ArrowRight className="size-4" aria-hidden />
+          Запустить прогноз <ArrowRight className="size-4" aria-hidden />
         </Link>
       </Reveal>
     </div>

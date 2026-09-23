@@ -6,4 +6,6 @@ export type TurbineMeta = {
   shortName: string;
   /** Series color — follows the turbine everywhere, never its position in a list. */
   color: string;
+  /** Marker shape — secondary encoding so identity never relies on color alone. */
+  marker: "dot" | "ring";
 };

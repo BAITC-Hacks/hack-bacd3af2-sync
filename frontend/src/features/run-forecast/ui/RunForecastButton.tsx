@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { ArrowRight, Send } from "lucide-react";
 
 import { Button } from "@/shared/ui";
 
@@ -14,11 +14,12 @@ export function RunForecastButton({ onRun, isRunning, className }: RunForecastBu
       size="lg"
       onClick={onRun}
       isLoading={isRunning}
-      loadingText="Agent running…"
-      icon={<Sparkles className="size-4" aria-hidden />}
+      loadingText="Агент работает…"
+      icon={<Send className="size-[18px]" strokeWidth={1.7} aria-hidden />}
+      trailingIcon={<ArrowRight className="ml-3 size-[18px]" strokeWidth={1.5} aria-hidden />}
       className={className}
     >
-      Run AI Agent
+      Запустить агента
     </Button>
   );
 }

@@ -1,39 +1,42 @@
-import { CircleCheck, CircleX, Loader } from "lucide-react";
-
-import { formatDuration } from "@/shared/lib";
 import { Badge } from "@/shared/ui";
 
 export type AgentRunState = "idle" | "running" | "revealing" | "completed" | "failed";
 
 type AgentRunBadgeProps = {
   state: AgentRunState;
-  totalDurationMs: number;
 };
 
-export function AgentRunBadge({ state, totalDurationMs }: AgentRunBadgeProps) {
+const DOT = "size-1.5 rounded-full";
+
+export function AgentRunBadge({ state }: AgentRunBadgeProps) {
   switch (state) {
     case "idle":
-      return <Badge>Idle</Badge>;
+      return (
+        <Badge>
+          <span aria-hidden className={`${DOT} bg-ink-subtle`} />
+          Ожидание
+        </Badge>
+      );
     case "running":
     case "revealing":
       return (
         <Badge tone="accent">
-          <Loader className="size-3 animate-spin" aria-hidden />
-          Running
+          <span aria-hidden className={`${DOT} animate-pulse-soft bg-cream`} />
+          Выполняется
         </Badge>
       );
     case "completed":
       return (
         <Badge tone="good">
-          <CircleCheck className="size-3 text-status-good" aria-hidden />
-          Completed · {formatDuration(totalDurationMs)}
+          <span aria-hidden className={`${DOT} bg-sage`} />
+          Завершено
         </Badge>
       );
     case "failed":
       return (
         <Badge tone="critical">
-          <CircleX className="size-3 text-status-critical" aria-hidden />
-          Failed
+          <span aria-hidden className={`${DOT} bg-status-critical`} />
+          Ошибка
         </Badge>
       );
   }

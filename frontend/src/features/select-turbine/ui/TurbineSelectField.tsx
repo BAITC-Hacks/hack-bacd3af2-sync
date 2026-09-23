@@ -1,13 +1,12 @@
-import { Fan } from "lucide-react";
 import { useId } from "react";
 
 import type { TurbineSelection } from "@/entities/turbine";
-import { Field, Select, type SelectOption } from "@/shared/ui";
+import { Field, Select, TurbineMark, type SelectOption } from "@/shared/ui";
 
 const TURBINE_OPTIONS: readonly SelectOption<TurbineSelection>[] = [
-  { value: "both", label: "Both turbines" },
-  { value: "1", label: "Turbine 1" },
-  { value: "2", label: "Turbine 2" },
+  { value: "both", label: "Обе турбины" },
+  { value: "1", label: "Турбина 1" },
+  { value: "2", label: "Турбина 2" },
 ];
 
 type TurbineSelectFieldProps = {
@@ -19,7 +18,7 @@ type TurbineSelectFieldProps = {
 export function TurbineSelectField({ value, onChange, disabled }: TurbineSelectFieldProps) {
   const selectId = useId();
   return (
-    <Field label="Turbine" htmlFor={selectId} icon={<Fan className="size-3.5" aria-hidden />}>
+    <Field label="Турбины" htmlFor={selectId} icon={<TurbineMark className="h-6 w-5 text-cream/75" />}>
       <Select id={selectId} value={value} options={TURBINE_OPTIONS} onValueChange={onChange} disabled={disabled} />
     </Field>
   );

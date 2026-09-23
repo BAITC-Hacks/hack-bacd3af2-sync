@@ -4,9 +4,11 @@ export type AgentStepId =
   | "prepare_features"
   | "run_model"
   | "validate_prediction"
+  | "analyze_result"
+  | "recompute"
   | "generate_explanation";
 
-/** "skipped" = never executed because an earlier step failed. */
+/** "skipped" = not executed: an earlier step failed, or (recompute) the analysis found no need. */
 export type AgentStepStatus = "pending" | "running" | "completed" | "failed" | "skipped";
 
 export type AgentStep = {

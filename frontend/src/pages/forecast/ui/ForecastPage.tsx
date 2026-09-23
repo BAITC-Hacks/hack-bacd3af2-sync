@@ -1,11 +1,15 @@
+import { useEffect, useRef } from "react";
+
 import { toForecastRequest, useRunForecast } from "@/entities/forecast";
-import { Reveal } from "@/shared/ui";
+import { Card, Reveal } from "@/shared/ui";
 import { AgentActivity } from "@/widgets/agent-activity";
 import { AiExplanation } from "@/widgets/ai-explanation";
+import { BrandCard } from "@/widgets/brand-card";
 import { PowerForecastChart } from "@/widgets/forecast-chart";
 import { ForecastControls } from "@/widgets/forecast-controls";
-import { MetricsPanel } from "@/widgets/metrics-panel";
-import { ForecastSummaryCard } from "@/widgets/turbine-summary";
+import { Header } from "@/widgets/header";
+import { ModelMetrics } from "@/widgets/metrics-panel";
+import { ForecastSummary } from "@/widgets/turbine-summary";
 import { WeatherPanel } from "@/widgets/weather-panel";
 
 import { useForecastParams } from "../model/useForecastParams";
@@ -18,31 +22,47 @@ export function ForecastPage() {
   const isRunning = runForecast.isPending;
   const handleRun = () => runForecast.mutate(toForecastRequest(params));
 
+  // Open on a real result: run the agent once with the default parameters on first visit.
+  const didAutoRun = useRef(false);
+  useEffect(() => {
+    if (didAutoRun.current) return;
+    didAutoRun.current = true;
+    runForecast.mutate(toForecastRequest(params));
+  }, [params, runForecast]);
+
   return (
-    <div className="pb-16">
-      <ForecastControls params={params} onParamsChange={updateParams} onRun={handleRun} isRunning={isRunning} />
+    <div className="mx-auto max-w-[1760px]">
+      <ForecastControls
+        params={params}
+        onParamsChange={updateParams}
+        onRun={handleRun}
+        isRunning={isRunning}
+        topRight={<Header />}
+      />
 
-      <div className="mt-8 grid gap-5 lg:grid-cols-12">
-        <Reveal className="lg:col-span-7" delay={0.2}>
-          <ForecastSummaryCard forecast={forecast} isLoading={isRunning} />
-        </Reveal>
-        <Reveal className="lg:col-span-5" delay={0.28}>
-          <AgentActivity forecast={forecast} isRunning={isRunning} error={runForecast.error} />
-        </Reveal>
-
-        <Reveal className="lg:col-span-12" delay={0.36}>
+      {/* ≥1680px: the reference layout (6·3·3 / 5·4·3). Laptops: two columns, decorative card hidden. */}
+      <div className="mt-5 grid gap-4 md:grid-cols-2 3xl:grid-cols-12">
+        <Reveal className="md:col-span-2 3xl:col-span-6" delay={0.2}>
           <PowerForecastChart forecast={forecast} isLoading={isRunning} />
         </Reveal>
+        <Reveal className="3xl:col-span-3" delay={0.26}>
+          <AgentActivity forecast={forecast} isRunning={isRunning} error={runForecast.error} />
+        </Reveal>
+        <Reveal className="3xl:col-span-3" delay={0.3}>
+          <Card className="h-full space-y-6">
+            <ForecastSummary forecast={forecast} isLoading={isRunning} />
+            <ModelMetrics />
+          </Card>
+        </Reveal>
 
-        <Reveal className="lg:col-span-7" delay={0.44}>
+        <Reveal className="3xl:col-span-5" delay={0.34}>
           <WeatherPanel forecast={forecast} isLoading={isRunning} />
         </Reveal>
-        <Reveal className="lg:col-span-5" delay={0.5}>
-          <MetricsPanel />
-        </Reveal>
-
-        <Reveal className="lg:col-span-12" delay={0.56}>
+        <Reveal className="3xl:col-span-4" delay={0.4}>
           <AiExplanation forecast={forecast} isLoading={isRunning} />
+        </Reveal>
+        <Reveal className="hidden 3xl:col-span-3 3xl:block" delay={0.46}>
+          <BrandCard />
         </Reveal>
       </div>
     </div>

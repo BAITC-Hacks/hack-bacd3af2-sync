@@ -1,0 +1,14 @@
+# Root build context (backend image). Keep it small: only backend/ and ml/ sources + models are copied.
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.env
+**/node_modules
+frontend
+data/*
+!data/weather
+reports
+ml/data
+ml/reports
+.git

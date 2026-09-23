@@ -8,10 +8,13 @@ AgentStepId = Literal[
     "prepare_features",
     "run_model",
     "validate_prediction",
+    "analyze_result",
+    "recompute",
     "generate_explanation",
 ]
 
-# "skipped" marks steps that never ran because an earlier step failed.
+# "skipped" marks steps that did not run: an earlier step failed, or (for "recompute")
+# the analysis found no reason to run it. The step message states which.
 AgentStepStatus = Literal["pending", "running", "completed", "failed", "skipped"]
 
 

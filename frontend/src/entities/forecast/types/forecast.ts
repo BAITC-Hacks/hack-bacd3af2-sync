@@ -31,6 +31,9 @@ export type ForecastSummary = {
 
 export type ForecastStatus = "completed" | "failed";
 
+/** Who wrote the explanation: the LLM, or the built-in template fallback. */
+export type ExplanationSource = "llm" | "template";
+
 export type ForecastResponse = {
   forecastDate: IsoDate;
   horizonHours: HorizonHours;
@@ -44,4 +47,5 @@ export type ForecastResponse = {
   explanation: string;
   modelVersion: string | null;
   weatherSource: string | null;
+  explanationSource: ExplanationSource | null;
 };

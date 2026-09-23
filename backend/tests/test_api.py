@@ -14,7 +14,7 @@ def test_health() -> None:
 def test_metrics_returns_both_turbines() -> None:
     body = client.get("/api/metrics").json()
     assert {model["turbine_id"] for model in body["models"]} == {1, 2}
-    assert body["source"] in {"demo", "file"}
+    assert body["source"] in {"demo", "holdout"}
 
 
 def test_forecast_48h_both_turbines() -> None:
@@ -38,9 +38,15 @@ def test_forecast_48h_both_turbines() -> None:
         "prepare_features",
         "run_model",
         "validate_prediction",
+        "analyze_result",
+        "recompute",
         "generate_explanation",
     ]
-    assert all(s["status"] == "completed" for s in body["agent_steps"])
+    statuses = {s["id"]: s["status"] for s in body["agent_steps"]}
+    # Clean demo input: the self-check finds nothing, so recompute is skipped with a reason.
+    assert statuses.pop("recompute") == "skipped"
+    assert set(statuses.values()) == {"completed"}
+    assert body["explanation_source"] == "template"
     assert body["summary"]["min_power"] <= body["summary"]["average_power"] <= body["summary"]["max_power"]
     assert body["explanation"]
     assert body["generated_at"].endswith("Z")
@@ -53,13 +59,22 @@ def test_forecast_is_deterministic() -> None:
     assert first["turbines"] == second["turbines"]
 
 
+def test_forecast_accepts_january_31() -> None:
+    response = client.post("/api/forecast", json={
+        "forecast_date": "2026-01-31", "horizon_hours": 48, "turbine_ids": [1, 2],
+    })
+    assert response.status_code == 200
+    assert response.json()["status"] == "completed"
+    assert response.json()["turbines"][0]["points"][0]["timestamp"] == "2026-01-31T00:00:00"
+
+
 def test_forecast_rejects_date_outside_february() -> None:
     response = client.post(
         "/api/forecast",
         json={"forecast_date": "2026-03-01", "horizon_hours": 24, "turbine_ids": [1]},
     )
     assert response.status_code == 422
-    assert "forecast_date must be between 2026-02-01 and 2026-02-28" in response.json()["detail"]
+    assert "forecast_date must be between 2026-01-31 and 2026-02-28" in response.json()["detail"]
 
 
 def test_forecast_rejects_invalid_horizon_and_turbines() -> None:

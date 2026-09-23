@@ -1,1 +1,1 @@
-export { ForecastSummaryCard } from "./ui/ForecastSummaryCard";
+export { ForecastSummary } from "./ui/ForecastSummary";

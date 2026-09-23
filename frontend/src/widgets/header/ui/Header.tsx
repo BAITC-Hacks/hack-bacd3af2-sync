@@ -1,36 +1,58 @@
 import { Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+
+import { TurbineMark } from "@/shared/ui";
 
 import { ApiStatus } from "./ApiStatus";
-import { Logo } from "./Logo";
 
-const NAV_ITEMS = [
-  { to: "/forecast", label: "Forecast" },
-  { to: "/about", label: "How it works" },
-] as const;
+const dateFormatter = new Intl.DateTimeFormat("ru-RU", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+const timeFormatter = new Intl.DateTimeFormat("ru-RU", { hour: "2-digit", minute: "2-digit", hour12: false });
 
+/** "Ср, 23 сент. 2026" — capitalised weekday, without the trailing "г.". */
+function formatHeaderDate(date: Date): string {
+  const text = dateFormatter.format(date).replace(/\s*г\.$/, "");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function useNow(intervalMs: number): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), intervalMs);
+    return () => window.clearInterval(timer);
+  }, [intervalMs]);
+  return now;
+}
+
+/** Top-right cluster over the hero: local date, clock and API status. */
 export function Header() {
+  const now = useNow(15_000);
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-canvas/70 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <Link to="/forecast" aria-label="WindAI home">
-          <Logo />
+    <div className="flex items-center gap-5 text-[12.5px] text-ink/80">
+      <time dateTime={now.toISOString()} className="hidden tabular-nums sm:block">
+        {formatHeaderDate(now)}
+      </time>
+      <span className="text-[14px] text-ink tabular-nums">{timeFormatter.format(now)}</span>
+      <ApiStatus />
+    </div>
+  );
+}
+
+/** Compact bar for screens without the sidebar. */
+export function MobileHeader() {
+  return (
+    <div className="flex items-center justify-between border-b border-line bg-sidebar/90 px-4 py-3 backdrop-blur lg:hidden">
+      <Link to="/forecast" className="flex items-center gap-2" aria-label="WindAI: на главную">
+        <TurbineMark className="h-7 w-6" />
+        <span className="font-display text-xl text-ink">WindAI</span>
+      </Link>
+      <nav aria-label="Главное меню" className="flex gap-1 text-[13px]">
+        <Link to="/forecast" className="rounded-lg px-2.5 py-1 text-ink-muted" activeProps={{ className: "bg-panel-soft !text-ink" }}>
+          Прогноз
         </Link>
-        <nav aria-label="Main" className="flex items-center gap-1">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className="rounded-lg px-3 py-1.5 text-sm text-ink-muted transition-colors hover:text-ink"
-              activeProps={{ className: "bg-white/[0.06] text-ink" }}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="hidden sm:block">
-          <ApiStatus />
-        </div>
-      </div>
-    </header>
+        <Link to="/about" className="rounded-lg px-2.5 py-1 text-ink-muted" activeProps={{ className: "bg-panel-soft !text-ink" }}>
+          Методология
+        </Link>
+      </nav>
+    </div>
   );
 }

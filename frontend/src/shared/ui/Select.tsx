@@ -31,7 +31,7 @@ export function Select<TValue extends string>({
           const next = options.find((option) => option.value === event.target.value);
           if (next) onValueChange(next.value);
         }}
-        className={cn(controlBase, "cursor-pointer appearance-none pr-10", className)}
+        className={cn(controlBase, "cursor-pointer appearance-none pr-8", className)}
         {...props}
       >
         {options.map((option) => (
@@ -42,7 +42,7 @@ export function Select<TValue extends string>({
       </select>
       <ChevronDown
         aria-hidden
-        className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-ink-subtle"
+        className="pointer-events-none absolute top-1/2 right-0 size-4 -translate-y-1/2 text-ink-muted"
       />
     </div>
   );
