@@ -1,9 +1,6 @@
 import json
 from pathlib import Path
 import numpy as np
-from catboost import CatBoostRegressor
-from sklearn.ensemble import HistGradientBoostingRegressor
-import joblib
 from src.config import RANDOM_SEED
 from src.features.build_features import FEATURES, WEATHER_FEATURES
 from src.training.baselines import EmpiricalPowerCurve
@@ -30,6 +27,8 @@ def parameters(name):
 
 
 def create_model(name):
+    from catboost import CatBoostRegressor
+    from sklearn.ensemble import HistGradientBoostingRegressor
     cls = EmpiricalPowerCurve if name == "power_curve" else (
         HistGradientBoostingRegressor if name == "hist_gradient_boosting" else CatBoostRegressor)
     return cls(**parameters(name))
@@ -52,6 +51,7 @@ def save_model(model, name, folder: Path):
         path.write_text(json.dumps({"wind": model.wind.tolist(), "power": model.power.tolist(),
                                     "bin_width": model.bin_width}), encoding="utf-8")
     else:
+        import joblib
         path = folder / "model.joblib"
         joblib.dump(model, path)
     return path
@@ -60,6 +60,7 @@ def save_model(model, name, folder: Path):
 def load_model(name, path):
     """Load only trusted locally generated artifacts; joblib is not safe for untrusted files."""
     if name.startswith("catboost"):
+        from catboost import CatBoostRegressor
         model = CatBoostRegressor()
         model.load_model(str(path))
         return model
@@ -69,5 +70,6 @@ def load_model(name, path):
         model.wind, model.power = np.array(data["wind"]), np.array(data["power"])
         return model
     if name == "hist_gradient_boosting":
+        import joblib
         return joblib.load(path)
     raise ValueError(f"Unknown model type: {name}")

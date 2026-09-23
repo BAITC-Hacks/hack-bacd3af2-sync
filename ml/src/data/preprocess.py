@@ -56,6 +56,9 @@ def aggregate_hourly(data: pd.DataFrame, turbine_id: int, *,
         temperature_count=("temperature", "count"), power_count=("power", "count"),
     )
     hourly["observation_count"] = groups.size()
+    if frame.empty:
+        # Pandas 2.x may return an empty MultiIndex for named resample aggregates.
+        hourly.index = pd.DatetimeIndex([], name="timestamp")
     hourly = hourly.reindex(pd.date_range(first, last.floor("h"), freq="h", name="timestamp"))
     counts = ["observation_count", "wind_speed_count", "temperature_count", "power_count"]
     hourly[counts] = hourly[counts].fillna(0).astype(int)

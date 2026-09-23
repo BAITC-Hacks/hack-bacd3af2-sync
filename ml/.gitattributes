@@ -1,0 +1,2 @@
+# Preserve exact forecast bytes: run.json verifies their SHA-256 on all platforms.
+**/predictions.csv -text

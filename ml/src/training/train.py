@@ -128,6 +128,12 @@ def report(results, report_dir):
                   "| Candidate | Mean selection MAE |", "| --- | ---: |"]
         for name, score in sorted(metrics["selection_mean_mae"].items(), key=lambda item: item[1]):
             lines.append(f"| {name} | {score:.6f} |")
+        lines += ["", "### Walk-forward baseline comparison", "",
+                  "| Window | Model | MAE | RMSE | R² |", "| --- | --- | ---: | ---: | ---: |"]
+        for fold in metrics["selection"]:
+            for name in ("persistence", "seasonal_persistence", "power_curve", metrics["selected_model"]):
+                m = fold["models"][name]["overall"]
+                lines.append(f"| {fold['label']} | {name} | {m['mae']:.6f} | {m['rmse']:.6f} | {m['r2']:.6f} |")
         lines += ["", "### Untouched holdout results", "", "| Model | MAE | RMSE | R² | Pairs |", "| --- | ---: | ---: | ---: | ---: |"]
         for name, record in metrics["holdout"]["models"].items():
             m = record["overall"]
@@ -137,7 +143,7 @@ def report(results, report_dir):
         lines += ["", f"Holdout uses {h['origins']} origins and {h['unique_target_hours']} unique target hours. Seasonal fallback rows: {h['baseline_notes']['seasonal_fallback_rows']}; maximum persistence staleness: {h['baseline_notes']['persistence_max_staleness_hours']:.1f} hours.", "",
                   f"Full per-window, per-horizon, wind-bin and clipping diagnostics: `../models/turbine_{turbine}/metrics.json`. Reproducible prediction pairs: `turbine_{turbine}_validation_predictions.csv.gz`.", ""]
     lines += ["## Weather integration", "", "History and backend weather use Asia/Almaty clock hours without UTC conversion. Backend supplies real archived Open-Meteo forecasts, already mapped to wind_speed and temperature. ML does not fetch weather or interpret wind-height fields. Existing scores still use observed-weather proxies; archived forecasts have not been evaluated in this training run.", "",
-              "## Remaining work", "", "Saved artifacts passed prediction round-trip checks. Backend predict_power input validation, model caching and archived-weather backtesting remain a separate stage. Separate turbine fits are compared with baselines here; a pooled turbine model has not been tested, so superiority over pooling is not established.", ""]
+              "## Scope of these metrics", "", "Saved artifacts passed prediction round-trip checks. Inference and real February archive replay are implemented separately; February accuracy still needs actual labels. Separate turbine fits beat the listed baselines here; a pooled turbine model has not been tested, so superiority over pooling is not established. See completion_status.md for delivery status.", ""]
     (report_dir / "model_comparison.md").write_text("\n".join(lines), encoding="utf-8")
 
 

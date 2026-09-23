@@ -8,6 +8,14 @@ from src.training.validation import training_before
 
 
 class TimezoneTests(unittest.TestCase):
+    def test_serialized_offsets_match_almaty_without_clock_shift(self):
+        for value in ("2026-02-01T00:00:00+05:00", "2023-03-11T00:00:00+06:00"):
+            result = local_timestamps(pd.Series([value]))
+            self.assertEqual(result.iloc[0].hour, 0)
+            self.assertIsNone(result.dt.tz)
+        with self.assertRaisesRegex(ValueError, "Offset does not match"):
+            local_timestamps(pd.Series(["2026-02-01T00:00:00+06:00"]))
+
     def test_backend_aware_and_source_naive_features_match(self):
         weather = pd.DataFrame({"timestamp": pd.to_datetime(["2023-03-11 00:00", "2026-01-01 00:00"]),
                                 "wind_speed": [6., 7.], "temperature": [15., 1.4]})

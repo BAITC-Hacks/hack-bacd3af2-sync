@@ -5,8 +5,10 @@ ML_ROOT = Path(__file__).resolve().parents[1]
 TIMEZONE = "Asia/Almaty"
 SITE_LATITUDE = 43.64
 SITE_LONGITUDE = 78.53
-WEATHER_PROVIDER = "backend: Open-Meteo Previous Runs / Historical Forecast API"
+WEATHER_PROVIDER = "backend: Open-Meteo Single Runs API archive export"
 WEATHER_COLUMNS = ("timestamp", "wind_speed", "temperature", "forecast_origin", "latitude", "longitude")
+LOW_WIND_SANITY_MPS = 1.0
+HIGH_POWER_AT_LOW_WIND = 0.2  # Diagnostic only; never a clipping/deletion rule.
 # Regional warmth is not evidence of a sensor anomaly. No temperature IQR flags.
 IQR_DIAGNOSTIC_COLUMNS = ("wind_speed", "power")
 RAW_DIR = ML_ROOT / "data" / "raw"
