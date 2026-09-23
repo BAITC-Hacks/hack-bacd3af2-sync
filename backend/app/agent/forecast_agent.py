@@ -71,6 +71,18 @@ def _raise_on_errors(turbine_id: int, report: ValidationReport) -> None:
         raise StepFailedError(f"Turbine {turbine_id}: {details}")
 
 
+def _model_reported_clips(frame: pd.DataFrame) -> int:
+    """Values the model clipped to [0, 1] itself, as reported in frame.attrs["diagnostics"].
+
+    The real ML model clips inside predict_power, so the frame the agent receives is already
+    in range; its diagnostics are the only trace. The mock model reports nothing (returns 0).
+    """
+    diagnostics = frame.attrs.get("diagnostics")
+    if not isinstance(diagnostics, dict):
+        return 0
+    return sum(int(diagnostics.get(key) or 0) for key in ("clipped_below_zero", "clipped_above_one"))
+
+
 def _turbine_list(turbine_ids: list[int]) -> str:
     return ", ".join(str(turbine_id) for turbine_id in turbine_ids)
 
@@ -211,9 +223,11 @@ class ForecastAgent:
     async def _validate_prediction(self, context: AgentContext) -> str:
         horizon = context.request.horizon_hours
         clipped_total = 0
+        model_clipped_total = 0
         anomalies: list[str] = []
 
         for turbine_id, frame in context.predictions.items():
+            model_clipped_total += _model_reported_clips(frame)
             report = validate_prediction_frame(frame, horizon)
             _raise_on_errors(turbine_id, report)
             if report.has("out_of_bounds"):
@@ -231,11 +245,19 @@ class ForecastAgent:
             f"{horizon * len(context.predictions)} predictions checked: contract columns, "
             f"no NaN, hourly timestamps, values within [{POWER_MIN:g}, {POWER_MAX:g}]."
         )
-        context.clipped_values = clipped_total
+        # Clipping done by the agent and clipping the model reported doing itself are the same
+        # signal for analyze_result, so the loop reacts identically on mock and real models.
+        context.clipped_values = clipped_total + model_clipped_total
         if clipped_total:
             message += f" Clipped {clipped_total} out-of-range value(s)."
             context.warnings.append(
                 f"Model returned {clipped_total} value(s) outside [0, 1]; they were clipped to physical bounds."
+            )
+        if model_clipped_total:
+            message += f" Model reported clipping {model_clipped_total} raw value(s) to [0, 1] itself."
+            context.warnings.append(
+                f"Model clipped {model_clipped_total} raw prediction(s) outside [0, 1] to physical bounds "
+                "(reported in its diagnostics)."
             )
         if anomalies:
             message += f" Flagged {len(anomalies)} operational signal(s)."

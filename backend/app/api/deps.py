@@ -68,7 +68,9 @@ def get_forecast_service() -> ForecastService:
 
 @lru_cache
 def get_metrics_service() -> MetricsService:
-    return MetricsService(get_settings().metrics_file)
+    # Real hold-out scores only describe the CatBoost models, so show them only when those serve.
+    settings = get_settings()
+    return MetricsService(settings.turbine_model_dir if settings.model_adapter == "real" else None)
 
 
 ForecastServiceDep = Annotated[ForecastService, Depends(get_forecast_service)]

@@ -1,9 +1,10 @@
-import { Target } from "lucide-react";
+import { Info, Target } from "lucide-react";
 import { motion } from "motion/react";
 
-import { useModelMetrics, type ModelMetrics } from "@/entities/metrics";
+import { useModelMetrics, type ModelMetrics, type ModelMetricsReport } from "@/entities/metrics";
 import { TURBINES } from "@/entities/turbine";
 import { EASE_OUT_EXPO } from "@/shared/config";
+import { formatShortDate } from "@/shared/lib";
 import { Badge, Card, CardHeader, Skeleton } from "@/shared/ui";
 
 const COLUMNS = [
@@ -11,6 +12,13 @@ const COLUMNS = [
   { key: "rmse", label: "RMSE", hint: "Root mean squared error — lower is better" },
   { key: "r2", label: "R²", hint: "Explained variance — closer to 1 is better" },
 ] as const satisfies readonly { key: keyof Omit<ModelMetrics, "turbineId">; label: string; hint: string }[];
+
+function describeSource(report: ModelMetricsReport | undefined): string {
+  if (!report) return "Model quality per turbine";
+  if (report.source === "demo" || !report.evaluation) return "Placeholder values — mock model is serving";
+  const { periodStart, periodEnd } = report.evaluation;
+  return `Hold-out ${formatShortDate(periodStart)} – ${formatShortDate(periodEnd)}`;
+}
 
 function MetricsRow({ model, index }: { model: ModelMetrics; index: number }) {
   const turbine = TURBINES[model.turbineId];
@@ -21,6 +29,11 @@ function MetricsRow({ model, index }: { model: ModelMetrics; index: number }) {
           <span aria-hidden className="size-2 rounded-full" style={{ backgroundColor: turbine.color }} />
           {turbine.name}
         </span>
+        {model.n !== null ? (
+          <span className="mt-0.5 block text-[11px] font-normal text-ink-subtle tabular-nums">
+            n = {model.n.toLocaleString("en-US")}
+          </span>
+        ) : null}
       </th>
       {COLUMNS.map((column) => (
         <td key={column.key} className="px-2 py-3.5 text-right text-ink tabular-nums">
@@ -50,10 +63,14 @@ export function MetricsPanel() {
       <CardHeader
         titleId="metrics-title"
         title="Model metrics"
-        description="Hold-out validation per turbine"
+        description={describeSource(data)}
         icon={<Target className="size-4" aria-hidden />}
         action={
-          data ? <Badge tone={data.source === "file" ? "accent" : "neutral"}>{data.source === "file" ? "Validation set" : "Demo metrics"}</Badge> : null
+          data ? (
+            <Badge tone={data.source === "holdout" ? "accent" : "neutral"}>
+              {data.source === "holdout" ? "Holdout · observed weather" : "Demo metrics"}
+            </Badge>
+          ) : null
         }
       />
 
@@ -92,6 +109,12 @@ export function MetricsPanel() {
               ))}
             </tbody>
           </table>
+          {data.evaluation ? (
+            <p className="mt-4 flex gap-2 rounded-xl border border-line bg-white/[0.025] px-3 py-2.5 text-xs leading-relaxed text-ink-muted">
+              <Info className="mt-0.5 size-3.5 shrink-0 text-ink-subtle" aria-hidden />
+              <span>{data.evaluation.note}</span>
+            </p>
+          ) : null}
           <dl className="mt-5 grid gap-2 border-t border-line pt-4 text-xs text-ink-subtle">
             {COLUMNS.map((column) => (
               <div key={column.key} className="flex gap-2">

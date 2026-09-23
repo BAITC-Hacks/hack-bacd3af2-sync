@@ -14,7 +14,7 @@ def test_health() -> None:
 def test_metrics_returns_both_turbines() -> None:
     body = client.get("/api/metrics").json()
     assert {model["turbine_id"] for model in body["models"]} == {1, 2}
-    assert body["source"] in {"demo", "file"}
+    assert body["source"] in {"demo", "holdout"}
 
 
 def test_forecast_48h_both_turbines() -> None:

@@ -135,3 +135,39 @@ def test_agent_runs_end_to_end_on_the_real_model(adapter: RealModelAdapter) -> N
     assert response.model_version == ", ".join(sorted({_version(MODEL_DIR, 1), _version(MODEL_DIR, 2)}))
     assert all(len(turbine.points) == 48 for turbine in response.turbines)
     assert response.turbines[0].points[-1].timestamp == FEB_01 + timedelta(hours=47)
+
+
+class _ShiftedModel:
+    """Wraps the real CatBoost model and pushes part of its raw output outside [0, 1]."""
+
+    def __init__(self, model: object) -> None:
+        self._model = model
+
+    def predict(self, features: pd.DataFrame):  # noqa: ANN201 — numpy array, as CatBoost returns
+        raw = self._model.predict(features).copy()  # type: ignore[attr-defined]
+        raw[:2] = 1.3
+        raw[2:3] = -0.2
+        return raw
+
+
+def test_real_model_self_clipping_reaches_the_agent_trigger(
+    adapter: RealModelAdapter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The real pipeline clips inside predict_with_models; the agent must still see it."""
+    import src.inference.predict as ml_predict
+
+    original = ml_predict.checked_prediction
+    monkeypatch.setattr(ml_predict, "checked_prediction", lambda model, features: original(_ShiftedModel(model), features))
+
+    frame = asyncio.run(adapter.predict(1, _weather(1, FEB_01), 48, FEB_01))
+    assert frame.attrs["diagnostics"]["clipped_above_one"] == 2
+    assert frame.attrs["diagnostics"]["clipped_below_zero"] == 1
+    assert frame["predicted_power"].between(0, 1).all()  # the numbers themselves are already clean
+
+    request = ForecastRequest(forecast_date=date(2026, 2, 1), horizon_hours=48, turbine_ids=[1, 2])
+    response = asyncio.run(ForecastAgent(WeatherService(MockWeatherProvider()), adapter).run(request))
+    steps = {step.id: step for step in response.agent_steps}
+    assert "Model reported clipping 6 raw value(s)" in steps["validate_prediction"].message
+    assert "fell outside [0, 1]" in steps["analyze_result"].message
+    assert steps["recompute"].status == "completed"
+    assert "Trigger persists" in steps["recompute"].message  # the shift is deterministic

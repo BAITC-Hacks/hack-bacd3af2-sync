@@ -33,7 +33,6 @@ class Settings(BaseSettings):
     ml_package_dir: Path = REPO_ROOT / "ml"
     # Main model bundles (turbine_N/). Earlier-cutoff snapshots live in asof_*/ subdirectories.
     turbine_model_dir: Path = REPO_ROOT / "ml" / "models"
-    metrics_file: Path = BACKEND_ROOT / "models" / "metrics.json"
 
     # "mock" is deterministic and offline; "open_meteo" calls the Historical Forecast API
     # and falls back to mock weather if the API is unreachable.

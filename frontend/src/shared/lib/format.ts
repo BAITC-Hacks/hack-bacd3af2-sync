@@ -24,6 +24,13 @@ export function formatDayHour(value: string): string {
   return `${formatDay(value)}, ${formatHour(value)}`;
 }
 
+const shortDateFormatter = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+/** "2025-12-01" → "Dec 1, 2025" (parsed as a local calendar date, no timezone shift). */
+export function formatShortDate(isoDate: string): string {
+  return shortDateFormatter.format(new Date(`${isoDate}T00:00:00`));
+}
+
 export function formatLongDate(isoDate: string): string {
   return longDateFormatter.format(new Date(`${isoDate}T00:00:00`));
 }

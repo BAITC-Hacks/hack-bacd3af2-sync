@@ -200,6 +200,50 @@ def test_failed_recompute_keeps_the_original_forecast() -> None:
     assert "the recompute failed" in response.explanation
 
 
+class _SelfClippingModel(ModelAdapter):
+    """Like the real ML model: output already in [0, 1], clipping only reported in attrs."""
+
+    name = "SelfClipping"
+
+    def __init__(self, reporting_calls: int) -> None:
+        self._inner = MockModelAdapter()
+        self._reporting_calls = reporting_calls
+        self.calls = 0
+
+    async def predict(
+        self, turbine_id: int, weather: pd.DataFrame, horizon_hours: int, forecast_origin: datetime
+    ) -> pd.DataFrame:
+        self.calls += 1
+        frame = await self._inner.predict(turbine_id, weather, horizon_hours, forecast_origin)
+        clipped = 3 if self.calls <= self._reporting_calls else 0
+        frame.attrs["diagnostics"] = {"clipped_below_zero": 1 if clipped else 0, "clipped_above_one": clipped - 1 if clipped else 0}
+        return frame
+
+
+def test_model_reported_clipping_triggers_recompute_like_agent_clipping() -> None:
+    model = _SelfClippingModel(reporting_calls=TURBINE_COUNT)  # only the first pass clipped
+    response = _run(ForecastAgent(_mock_weather(), model))
+
+    validate = _step(response, "validate_prediction")
+    assert "Model reported clipping 6 raw value(s)" in validate.message
+    assert "6 predicted value(s) fell outside [0, 1]" in _step(response, "analyze_result").message
+    assert _step(response, "recompute").status == "completed"
+    assert "All triggers resolved" in _step(response, "recompute").message
+    assert model.calls == 2 * TURBINE_COUNT
+
+
+def test_persistent_model_reported_clipping_keeps_the_trigger() -> None:
+    response = _run(ForecastAgent(_mock_weather(), _SelfClippingModel(reporting_calls=10_000)))
+
+    assert "Trigger persists" in _step(response, "recompute").message
+    assert any("reported in its diagnostics" in warning for warning in response.warnings)
+
+
+def test_frames_without_diagnostics_do_not_trigger() -> None:
+    response = _run(ForecastAgent(_mock_weather(), _CountingModel()))
+    assert _step(response, "recompute").status == "skipped"
+
+
 # --- generate_explanation: LLM and fallback ---------------------------------------------
 
 
