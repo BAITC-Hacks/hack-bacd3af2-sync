@@ -56,7 +56,7 @@
   "serialization_roundtrip_verified": true,
   "postprocessing": "clip [0,1] and count corrections",
   "limitations": [
-    "No archived weather forecasts: scores are not operational forecasting accuracy",
+    "Validation scores use observed weather and do not measure operational forecasting accuracy; February backtest uses backend-exported Open-Meteo Single Runs API forecasts (ecmwf_ifs), but accuracy is not evaluated because February actual power is unavailable",
     "Final model includes holdout history; holdout score belongs to the pre-holdout fit",
     "No February data read or used; no lag features"
   ],
@@ -65,7 +65,7 @@
     "temperature": 3.9631030900816726
   },
   "timestamp_representation": "Asia/Almaty wall-clock; no UTC conversion",
-  "weather_provider": "backend: Open-Meteo Previous Runs / Historical Forecast API",
+  "weather_provider": "backend: Open-Meteo Single Runs API (ecmwf_ifs) archive export",
   "weather_input_columns": [
     "timestamp",
     "wind_speed",

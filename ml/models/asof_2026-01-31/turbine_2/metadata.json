@@ -57,7 +57,7 @@
     "temperature": 2.5875913300948765
   },
   "timestamp_representation": "Asia/Almaty wall-clock; no UTC conversion",
-  "weather_provider": "backend: Open-Meteo Previous Runs / Historical Forecast API",
+  "weather_provider": "backend: Open-Meteo Single Runs API (ecmwf_ifs) archive export",
   "weather_input_columns": [
     "timestamp",
     "wind_speed",
