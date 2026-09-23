@@ -158,6 +158,24 @@ class WeatherService:
             frames = await self._fetch_all(self._fallback, turbine_ids, forecast_origin, horizon_hours)
             return WeatherBatch(frames=frames, source=self._fallback.source, fallback_reason=str(exc))
 
+    @property
+    def has_fallback(self) -> bool:
+        return self._fallback is not None
+
+    @property
+    def primary_source(self) -> str:
+        return self._provider.source
+
+    async def get_primary_weather(
+        self,
+        turbine_ids: list[int],
+        forecast_origin: datetime,
+        horizon_hours: int,
+    ) -> WeatherBatch:
+        """Fetch from the primary provider only (no fallback). Raises WeatherProviderError."""
+        frames = await self._fetch_all(self._provider, turbine_ids, forecast_origin, horizon_hours)
+        return WeatherBatch(frames=frames, source=self._provider.source)
+
     @staticmethod
     def fill_gaps(frame: pd.DataFrame) -> tuple[pd.DataFrame, int]:
         """Interpolate missing wind/temperature values in time. Returns (frame, filled_count)."""

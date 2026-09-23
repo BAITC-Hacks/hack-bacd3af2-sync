@@ -1,26 +1,40 @@
 """ForecastAgent — orchestrates the forecasting pipeline.
 
-fetch_weather → validate_weather → prepare_features → run_model → validate_prediction → generate_explanation
+fetch_weather → validate_weather → prepare_features → run_model → validate_prediction
+    → analyze_result → recompute → generate_explanation
 
 Every step calls a real service, inspects the result and decides what happens next:
 repair the data (interpolate gaps, clip out-of-range values), continue with a warning,
-or stop the pipeline. The returned agent_steps reflect what actually happened.
+or stop the pipeline. analyze_result closes the loop: the agent inspects its own forecast
+and, if the input looks doubtful or better input became available, recompute runs the
+pipeline once more on fresh input (at most once). The returned agent_steps reflect what
+actually happened.
 """
 
 import asyncio
+import logging
 
 import pandas as pd
 
 from app.agent.agent_steps import (
+    NON_FATAL_STEPS,
     PIPELINE,
+    STEP_TITLES,
     AgentContext,
     StepFailedError,
     StepHandler,
+    StepSkippedError,
     execute_step,
     skipped_step,
 )
-from app.core.constants import POWER_MAX, POWER_MIN, PREDICTION_COLUMNS, WEATHER_COLUMNS
-from app.ml.model_adapter import ModelAdapter
+from app.core.constants import (
+    INCONSISTENT_SHARE_TRIGGER,
+    POWER_MAX,
+    POWER_MIN,
+    PREDICTION_COLUMNS,
+    WEATHER_COLUMNS,
+)
+from app.ml.model_adapter import ModelAdapter, ModelPredictionError
 from app.schemas.agent import AgentStep, AgentStepId
 from app.schemas.forecast import (
     ForecastPoint,
@@ -29,9 +43,21 @@ from app.schemas.forecast import (
     TurbineForecast,
 )
 from app.services import analysis_service
-from app.services.weather_service import WeatherProviderError, WeatherService
+from app.services.llm_explainer import ForecastExplainer, LlmExplainerError
+from app.services.weather_service import WeatherBatch, WeatherProviderError, WeatherService
 from app.utils.datetime import forecast_origin_for, utc_now
 from app.utils.validation import ValidationReport, validate_prediction_frame, validate_weather_frame
+
+logger = logging.getLogger(__name__)
+
+# Pipeline stages re-run by the recompute step (fetch is skipped when fresh weather is ready).
+_RECOMPUTE_STAGES: tuple[AgentStepId, ...] = (
+    "fetch_weather",
+    "validate_weather",
+    "prepare_features",
+    "run_model",
+    "validate_prediction",
+)
 
 _WEATHER_SOURCE_LABELS = {
     "mock": "the deterministic demo weather generator",
@@ -50,17 +76,24 @@ def _turbine_list(turbine_ids: list[int]) -> str:
 
 
 class ForecastAgent:
-    # TODO: Replace MockModelAdapter with RealModelAdapter after ML model is ready
-    #       (set MODEL_ADAPTER=real — the agent itself does not change).
-    def __init__(self, weather_service: WeatherService, model_adapter: ModelAdapter) -> None:
+    # The model is injected: MockModelAdapter or RealModelAdapter (MODEL_ADAPTER) — the agent does not change.
+    def __init__(
+        self,
+        weather_service: WeatherService,
+        model_adapter: ModelAdapter,
+        explainer: ForecastExplainer | None = None,
+    ) -> None:
         self._weather = weather_service
         self._model = model_adapter
+        self._explainer = explainer
         self._handlers: dict[AgentStepId, StepHandler] = {
             "fetch_weather": self._fetch_weather,
             "validate_weather": self._validate_weather,
             "prepare_features": self._prepare_features,
             "run_model": self._run_model,
             "validate_prediction": self._validate_prediction,
+            "analyze_result": self._analyze_result,
+            "recompute": self._recompute,
             "generate_explanation": self._generate_explanation,
         }
 
@@ -75,7 +108,7 @@ class ForecastAgent:
                 continue
             step = await execute_step(step_id, self._handlers[step_id], context)
             steps.append(step)
-            if step.status == "failed":
+            if step.status == "failed" and step_id not in NON_FATAL_STEPS:
                 failed_step = step
 
         return self._build_response(context, steps, failed_step)
@@ -91,8 +124,7 @@ class ForecastAgent:
         except WeatherProviderError as exc:
             raise StepFailedError(f"Weather could not be retrieved: {exc}") from exc
 
-        context.weather = batch.frames
-        context.weather_source = batch.source
+        self._load_weather(context, batch)
         source = _WEATHER_SOURCE_LABELS.get(batch.source, batch.source)
         message = (
             f"Loaded {request.horizon_hours} hourly weather points for turbine(s) "
@@ -150,17 +182,20 @@ class ForecastAgent:
     async def _run_model(self, context: AgentContext) -> str:
         request = context.request
         turbine_ids = list(context.model_inputs)
-        results = await asyncio.gather(
-            *(
-                self._model.predict(
-                    turbine_id=turbine_id,
-                    weather=context.model_inputs[turbine_id],
-                    horizon_hours=request.horizon_hours,
-                    forecast_origin=context.forecast_origin,
+        try:
+            results = await asyncio.gather(
+                *(
+                    self._model.predict(
+                        turbine_id=turbine_id,
+                        weather=context.model_inputs[turbine_id],
+                        horizon_hours=request.horizon_hours,
+                        forecast_origin=context.forecast_origin,
+                    )
+                    for turbine_id in turbine_ids
                 )
-                for turbine_id in turbine_ids
             )
-        )
+        except ModelPredictionError as exc:
+            raise StepFailedError(f"Model rejected the request: {exc}") from exc
         context.predictions = dict(zip(turbine_ids, results, strict=True))
 
         versions = sorted(
@@ -196,6 +231,7 @@ class ForecastAgent:
             f"{horizon * len(context.predictions)} predictions checked: contract columns, "
             f"no NaN, hourly timestamps, values within [{POWER_MIN:g}, {POWER_MAX:g}]."
         )
+        context.clipped_values = clipped_total
         if clipped_total:
             message += f" Clipped {clipped_total} out-of-range value(s)."
             context.warnings.append(
@@ -205,19 +241,163 @@ class ForecastAgent:
             message += f" Flagged {len(anomalies)} operational signal(s)."
         return message
 
+    async def _analyze_result(self, context: AgentContext) -> str:
+        """Inspect the validated forecast and decide whether a recompute is warranted."""
+        request = context.request
+        reasons: list[str] = []
+        notes: list[str] = []
+
+        if context.clipped_values:
+            reasons.append(
+                f"{context.clipped_values} predicted value(s) fell outside [0, 1] and had to be clipped"
+            )
+
+        if context.weather_fallback_reason:
+            try:
+                context.refreshed_weather = await self._weather.get_primary_weather(
+                    request.turbine_ids, context.forecast_origin, request.horizon_hours
+                )
+            except WeatherProviderError as exc:
+                notes.append(f"Primary weather provider is still unavailable ({exc}); keeping demo weather.")
+            else:
+                reasons.append(
+                    f"the forecast ran on fallback demo weather and {context.refreshed_weather.source} "
+                    "answered on retry"
+                )
+
+        consistency = analysis_service.check_physical_consistency(context.predictions)
+        if consistency.share >= INCONSISTENT_SHARE_TRIGGER:
+            reasons.append(
+                f"{consistency.inconsistent_hours} of {consistency.total_hours} hours ({consistency.share:.0%}) "
+                f"contradict the wind ({consistency.calm_but_producing} calm but producing, "
+                f"{consistency.windy_but_idle} windy but idle)"
+            )
+
+        context.recompute_reasons = reasons
+        if reasons:
+            return f"Recompute required ({len(reasons)} trigger(s)): {'; '.join(reasons)}."
+
+        checks = (
+            f"{context.clipped_values} clipped value(s), weather from {context.weather_source}, "
+            f"{consistency.inconsistent_hours}/{consistency.total_hours} physically inconsistent hours "
+            f"({consistency.share:.0%}, trigger at {INCONSISTENT_SHARE_TRIGGER:.0%})"
+        )
+        return " ".join([f"No recompute needed — checked {checks}.", *notes])
+
+    async def _recompute(self, context: AgentContext) -> str:
+        """Run the pipeline once more on fresh input and adopt the result. Never loops."""
+        if not context.recompute_reasons:
+            raise StepSkippedError("Not needed: the analysis found no reason to recompute.")
+
+        context.recompute_performed = True
+        sub = AgentContext(request=context.request, forecast_origin=context.forecast_origin)
+        stages = _RECOMPUTE_STAGES
+        if context.refreshed_weather is not None:
+            self._load_weather(sub, context.refreshed_weather)
+            stages = _RECOMPUTE_STAGES[1:]
+
+        current = stages[0]
+        try:
+            for current in stages:
+                await self._handlers[current](sub)
+        except Exception as exc:  # noqa: BLE001 — any failure keeps the original forecast
+            context.recompute_outcome = "the recompute failed, so the original validated forecast was kept."
+            raise StepFailedError(
+                f"Recompute failed at “{STEP_TITLES[current]}”: {exc} — kept the original validated forecast."
+            ) from exc
+
+        before = context.summary.average_power if context.summary else None
+        self._adopt(context, sub)
+        after = context.summary.average_power if context.summary else None
+        change = f" Average power {before:.3f} → {after:.3f}." if before is not None and after is not None else ""
+
+        remaining = self._remaining_triggers(sub)
+        if remaining:
+            context.recompute_outcome = f"the trigger persisted after recompute ({'; '.join(remaining)})."
+            context.warnings.append(
+                f"Recompute did not remove the trigger ({'; '.join(remaining)}) — treat this forecast with caution."
+            )
+            return f"Recomputed once on fresh input (weather: {sub.weather_source}).{change} Trigger persists: {'; '.join(remaining)}."
+
+        context.recompute_outcome = "the recomputed forecast passed all checks and replaced the first result."
+        return f"Recomputed once on fresh input (weather: {sub.weather_source}).{change} All triggers resolved."
+
     async def _generate_explanation(self, context: AgentContext) -> str:
         if context.summary is None:
             raise StepFailedError("No validated forecast summary is available to explain.")
-        explanation, signals = analysis_service.build_explanation(
-            analysis_service.ExplanationInput(
-                predictions=context.predictions,
-                summary=context.summary,
-                horizon_hours=context.request.horizon_hours,
-                warning_count=len(context.warnings),
-            )
+        data = analysis_service.ExplanationInput(
+            predictions=context.predictions,
+            summary=context.summary,
+            horizon_hours=context.request.horizon_hours,
+            warning_count=len(context.warnings),
+            recompute=analysis_service.RecomputeInfo(
+                performed=context.recompute_performed,
+                reasons=list(context.recompute_reasons),
+                outcome=context.recompute_outcome,
+            ),
         )
-        context.explanation = explanation
-        return f"Summarised the forecast from {signals} statistical signal(s) and {len(context.warnings)} warning(s)."
+        template, signals = analysis_service.build_explanation(data)
+
+        if self._explainer is None:
+            context.explanation, context.explanation_source = template, "template"
+            return f"Template explanation from {signals} signal(s) — LLM disabled (OPENAI_API_KEY is not set)."
+
+        facts = analysis_service.build_explanation_facts(
+            data,
+            forecast_date=context.request.forecast_date.isoformat(),
+            weather_source=context.weather_source,
+            model_version=context.model_version,
+            warnings=context.warnings,
+        )
+        try:
+            explanation = await self._explainer.explain(facts)
+        except LlmExplainerError as exc:
+            reason = str(exc)
+        except Exception as exc:  # noqa: BLE001 — the explanation must never fail the forecast
+            logger.exception("LLM explainer crashed")
+            reason = f"unexpected error: {exc}"
+        else:
+            context.explanation, context.explanation_source = explanation, "llm"
+            return (
+                f"{self._explainer.name} explained the forecast from {len(facts)} fact groups, "
+                f"{len(context.warnings)} warning(s) and the recompute decision."
+            )
+
+        context.explanation, context.explanation_source = template, "template"
+        return f"{self._explainer.name} unavailable ({reason}) — used the template explanation ({signals} signal(s))."
+
+    # --- helpers ------------------------------------------------------------------------
+
+    @staticmethod
+    def _load_weather(context: AgentContext, batch: WeatherBatch) -> None:
+        context.weather = dict(batch.frames)
+        context.weather_source = batch.source
+        context.weather_fallback_reason = batch.fallback_reason
+
+    @staticmethod
+    def _adopt(context: AgentContext, recomputed: AgentContext) -> None:
+        """Replace the first-pass result with the recomputed one (its warnings included)."""
+        context.weather = recomputed.weather
+        context.weather_source = recomputed.weather_source
+        context.weather_fallback_reason = recomputed.weather_fallback_reason
+        context.model_inputs = recomputed.model_inputs
+        context.predictions = recomputed.predictions
+        context.model_version = recomputed.model_version
+        context.summary = recomputed.summary
+        context.clipped_values = recomputed.clipped_values
+        context.warnings = list(recomputed.warnings)
+
+    @staticmethod
+    def _remaining_triggers(context: AgentContext) -> list[str]:
+        remaining: list[str] = []
+        if context.clipped_values:
+            remaining.append(f"{context.clipped_values} value(s) still clipped")
+        if context.weather_fallback_reason:
+            remaining.append("weather still from the fallback source")
+        consistency = analysis_service.check_physical_consistency(context.predictions)
+        if consistency.share >= INCONSISTENT_SHARE_TRIGGER:
+            remaining.append(f"{consistency.share:.0%} of hours still physically inconsistent")
+        return remaining
 
     # --- response -----------------------------------------------------------------------
 
@@ -258,6 +438,7 @@ class ForecastAgent:
             explanation=context.explanation,
             model_version=context.model_version,
             weather_source=context.weather_source,
+            explanation_source=context.explanation_source,
         )
 
     @staticmethod

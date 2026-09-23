@@ -1,4 +1,5 @@
 export type {
+  ExplanationSource,
   ForecastPoint,
   ForecastRequest,
   ForecastResponse,

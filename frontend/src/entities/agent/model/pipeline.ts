@@ -16,6 +16,8 @@ export const AGENT_PIPELINE: readonly PipelineStage[] = [
   { id: "prepare_features", title: "Prepare model inputs", description: "Contract-shaped frames for the ML model" },
   { id: "run_model", title: "Run ML model", description: "Hourly normalized power per turbine" },
   { id: "validate_prediction", title: "Validate prediction", description: "NaN, [0, 1] bounds, horizon, anomalies" },
+  { id: "analyze_result", title: "Analyze result", description: "Self-check: clipping, fallback weather, physics" },
+  { id: "recompute", title: "Recompute forecast", description: "One re-run on fresh input, only if needed" },
   { id: "generate_explanation", title: "Generate explanation", description: "Narrative summary of the forecast" },
 ];
 

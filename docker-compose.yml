@@ -1,6 +1,8 @@
 services:
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: windai-backend
     ports:
       - "8000:8000"
@@ -8,7 +10,7 @@ services:
       APP_NAME: WindAI
       ENV: production
       CORS_ORIGINS: http://localhost:5173
-      MODEL_ADAPTER: ${MODEL_ADAPTER:-mock}
+      MODEL_ADAPTER: ${MODEL_ADAPTER:-mock}  # real = ML team's CatBoost models (bundled in the image)
       WEATHER_PROVIDER: ${WEATHER_PROVIDER:-mock}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]

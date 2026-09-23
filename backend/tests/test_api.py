@@ -38,9 +38,15 @@ def test_forecast_48h_both_turbines() -> None:
         "prepare_features",
         "run_model",
         "validate_prediction",
+        "analyze_result",
+        "recompute",
         "generate_explanation",
     ]
-    assert all(s["status"] == "completed" for s in body["agent_steps"])
+    statuses = {s["id"]: s["status"] for s in body["agent_steps"]}
+    # Clean demo input: the self-check finds nothing, so recompute is skipped with a reason.
+    assert statuses.pop("recompute") == "skipped"
+    assert set(statuses.values()) == {"completed"}
+    assert body["explanation_source"] == "template"
     assert body["summary"]["min_power"] <= body["summary"]["average_power"] <= body["summary"]["max_power"]
     assert body["explanation"]
     assert body["generated_at"].endswith("Z")

@@ -66,5 +66,6 @@ export function mapForecastResponseDto(dto: ForecastResponseDto): ForecastRespon
     explanation: dto.explanation,
     modelVersion: dto.model_version,
     weatherSource: dto.weather_source,
+    explanationSource: dto.explanation_source,
   };
 }

@@ -1,7 +1,7 @@
 import { Sparkles } from "lucide-react";
 import { motion } from "motion/react";
 
-import { WEATHER_SOURCE_LABELS, type ForecastResponse } from "@/entities/forecast";
+import { WEATHER_SOURCE_LABELS, type ExplanationSource, type ForecastResponse } from "@/entities/forecast";
 import { baseTransition } from "@/shared/config";
 import { formatRelativeTime } from "@/shared/lib";
 import { Badge, Card, CardHeader, Skeleton } from "@/shared/ui";
@@ -14,6 +14,11 @@ type AiExplanationProps = {
 };
 
 /** Split on sentence-ending punctuation followed by whitespace, so decimals like "0.98" stay intact. */
+const EXPLANATION_SOURCE_LABELS: Record<ExplanationSource, string> = {
+  llm: "LLM (OpenAI)",
+  template: "Template (LLM off)",
+};
+
 function splitSentences(text: string): string[] {
   return text.split(/(?<=[.!?])\s+/).filter(Boolean);
 }
@@ -58,6 +63,8 @@ export function AiExplanation({ forecast, isLoading }: AiExplanationProps) {
           <div className="space-y-4">
             <WarningList warnings={forecast.warnings} />
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 border-t border-line pt-4 text-xs">
+              <dt className="text-ink-subtle">Written by</dt>
+              <dd className="text-ink-muted">{EXPLANATION_SOURCE_LABELS[forecast.explanationSource ?? "template"]}</dd>
               <dt className="text-ink-subtle">Model</dt>
               <dd className="font-mono text-ink-muted">{forecast.modelVersion ?? "—"}</dd>
               <dt className="text-ink-subtle">Weather</dt>

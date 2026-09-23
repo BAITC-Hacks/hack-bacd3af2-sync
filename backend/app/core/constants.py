@@ -68,3 +68,11 @@ CUT_IN_WIND_SPEED: Final = 3.0  # m/s, turbines do not generate below this
 EXTREME_COLD_C: Final = -30.0  # °C, cold-weather operating limits
 POWER_RAMP_ALERT: Final = 0.45  # normalized power change within one hour
 LOW_GENERATION_AVG: Final = 0.10  # average normalized power considered "calm period"
+
+# --- Result analysis (agent decides whether to recompute) -------------------------------
+
+CALM_WIND_MAX: Final = CUT_IN_WIND_SPEED  # m/s — below cut-in a turbine should not produce
+CALM_POWER_MAX: Final = 0.10  # more than this while calm is physically inconsistent
+WINDY_WIND_MIN: Final = 10.0  # m/s — a healthy turbine should produce well at this wind
+WINDY_POWER_MIN: Final = 0.05  # less than this while windy (below cut-out) is inconsistent
+INCONSISTENT_SHARE_TRIGGER: Final = 0.10  # share of inconsistent hours that triggers a recompute

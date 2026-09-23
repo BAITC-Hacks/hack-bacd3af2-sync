@@ -16,7 +16,11 @@ import pandas as pd
 
 
 class ModelUnavailableError(RuntimeError):
-    """Raised when the configured model cannot be loaded."""
+    """Raised when the configured model cannot be loaded (at startup)."""
+
+
+class ModelPredictionError(RuntimeError):
+    """Raised when the model rejects one prediction request (bad input, no eligible bundle)."""
 
 
 class ModelAdapter(ABC):

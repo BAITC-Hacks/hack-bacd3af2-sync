@@ -69,3 +69,5 @@ class ForecastResponse(BaseModel):
     explanation: str
     model_version: str | None = None
     weather_source: str | None = None
+    # "llm" when the explanation was written by the LLM, "template" for the built-in fallback.
+    explanation_source: Literal["llm", "template"] | None = None

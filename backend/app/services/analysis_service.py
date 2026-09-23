@@ -1,17 +1,21 @@
 """Forecast analytics: summary statistics, operational anomaly detection and the
 natural-language explanation produced by the agent's final step."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
 
 from app.core.constants import (
+    CALM_POWER_MAX,
+    CALM_WIND_MAX,
     CUT_OUT_WIND_SPEED,
     EXTREME_COLD_C,
     LOW_GENERATION_AVG,
     POWER_RAMP_ALERT,
     TURBINES,
+    WINDY_POWER_MIN,
+    WINDY_WIND_MIN,
 )
 from app.schemas.forecast import ForecastSummary
 
@@ -103,11 +107,46 @@ def detect_power_anomalies(turbine_id: int, prediction: pd.DataFrame) -> list[st
 
 
 @dataclass(frozen=True, slots=True)
+class ConsistencyCheck:
+    """Hours where predicted power contradicts the wind that drives it."""
+
+    calm_but_producing: int
+    windy_but_idle: int
+    total_hours: int
+
+    @property
+    def inconsistent_hours(self) -> int:
+        return self.calm_but_producing + self.windy_but_idle
+
+    @property
+    def share(self) -> float:
+        return self.inconsistent_hours / self.total_hours if self.total_hours else 0.0
+
+
+def check_physical_consistency(predictions: dict[int, pd.DataFrame]) -> ConsistencyCheck:
+    frames = pd.concat(predictions.values(), ignore_index=True)
+    wind, power = frames["wind_speed"], frames["predicted_power"]
+    calm = (wind < CALM_WIND_MAX) & (power > CALM_POWER_MAX)
+    windy = (wind >= WINDY_WIND_MIN) & (wind < CUT_OUT_WIND_SPEED) & (power < WINDY_POWER_MIN)
+    return ConsistencyCheck(int(calm.sum()), int(windy.sum()), len(frames))
+
+
+@dataclass(frozen=True, slots=True)
+class RecomputeInfo:
+    """What the agent's analysis decided, for the explanation step."""
+
+    performed: bool
+    reasons: list[str] = field(default_factory=list)
+    outcome: str = ""
+
+
+@dataclass(frozen=True, slots=True)
 class ExplanationInput:
     predictions: dict[int, pd.DataFrame]
     summary: ForecastSummary
     horizon_hours: int
     warning_count: int
+    recompute: RecomputeInfo = field(default_factory=lambda: RecomputeInfo(performed=False))
 
 
 def _level(average: float) -> str:
@@ -178,6 +217,8 @@ def build_explanation(data: ExplanationInput) -> tuple[str, int]:
             f"Cold air (mean {mean_temperature:.0f} °C) is denser, which slightly lifts output at a given wind speed."
         )
 
+    sentences.append(_recompute_sentence(data.recompute))
+
     if data.warning_count:
         sentences.append(
             f"{data.warning_count} operational warning(s) were raised — review them before dispatch planning."
@@ -186,3 +227,74 @@ def build_explanation(data: ExplanationInput) -> tuple[str, int]:
         sentences.append("All values stay within normalized physical bounds and no operational anomalies were found.")
 
     return " ".join(sentences), len(sentences)
+
+
+def _recompute_sentence(recompute: RecomputeInfo) -> str:
+    if not recompute.performed:
+        return (
+            "The agent's self-check found no reason to recompute: no out-of-range values, "
+            "no fallback weather and no physically inconsistent hours."
+        )
+    reasons = "; ".join(recompute.reasons) or "the analysis flagged the first result"
+    return f"The agent recomputed the forecast once because {reasons} — {recompute.outcome}"
+
+
+def build_explanation_facts(
+    data: ExplanationInput,
+    *,
+    forecast_date: str,
+    weather_source: str | None,
+    model_version: str | None,
+    warnings: list[str],
+) -> dict[str, object]:
+    """Numbers the LLM is allowed to talk about — nothing else is sent."""
+    frames = pd.concat(data.predictions.values(), ignore_index=True)
+    fleet = _fleet_series(data.predictions)
+    top_hours = fleet.sort_values(ascending=False).head(3)
+    wind_by_time = frames.groupby("timestamp")["wind_speed"].mean()
+    low_window = _low_output_window(fleet)
+    correlation: float | None = None
+    if frames["wind_speed"].std() > 0 and frames["predicted_power"].std() > 0:
+        correlation = round(float(np.corrcoef(frames["wind_speed"], frames["predicted_power"])[0, 1]), 2)
+
+    return {
+        "forecast_date": forecast_date,
+        "horizon_hours": data.horizon_hours,
+        "power_unit": "normalized active power, 0..1 = share of rated capacity",
+        "fleet_average_power": round(data.summary.average_power, 3),
+        "min_power": round(data.summary.min_power, 3),
+        "max_power": round(data.summary.max_power, 3),
+        "peak_hours": [
+            {
+                "timestamp": pd.Timestamp(ts).isoformat(),
+                "fleet_power": round(float(value), 3),
+                "wind_speed_ms": round(float(wind_by_time[ts]), 1),
+            }
+            for ts, value in top_hours.items()
+        ],
+        "low_output_window": (
+            {"from": low_window[0].isoformat(), "to": low_window[1].isoformat()} if low_window else None
+        ),
+        "wind_speed_ms": {
+            "min": round(float(frames["wind_speed"].min()), 1),
+            "max": round(float(frames["wind_speed"].max()), 1),
+            "mean": round(float(frames["wind_speed"].mean()), 1),
+        },
+        "temperature_c": {
+            "min": round(float(frames["temperature"].min()), 1),
+            "max": round(float(frames["temperature"].max()), 1),
+        },
+        "wind_power_correlation": correlation,
+        "turbines": [
+            {"turbine": _turbine_name(turbine_id), "average_power": round(float(frame["predicted_power"].mean()), 3)}
+            for turbine_id, frame in sorted(data.predictions.items())
+        ],
+        "warnings": warnings,
+        "recompute": {
+            "performed": data.recompute.performed,
+            "reasons": data.recompute.reasons,
+            "outcome": data.recompute.outcome,
+        },
+        "weather_source": weather_source,
+        "model_version": model_version,
+    }
