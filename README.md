@@ -70,7 +70,7 @@ pip install -r requirements-ml.txt        # backend + ml/requirements-inference.
 cp .env.example .env                      # then edit it; .env is git-ignored
 #   MODEL_ADAPTER=real          ← CatBoost models from ml/models
 #   WEATHER_PROVIDER=open_meteo ← live weather for the real turbine coordinates
-#   OPENAI_API_KEY=sk-...       ← optional; empty = template explanation
+#   OPENAI_API_KEY=<your-openai-key>  ← optional; empty = template explanation
 uvicorn app.main:app --reload             # http://localhost:8000/docs
 
 # Frontend (second terminal)
