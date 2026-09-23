@@ -1,0 +1,2 @@
+# Stable forecast bytes: run.json verifies SHA-256 on Windows and Linux.
+**/predictions.csv text eol=lf

@@ -7,6 +7,15 @@ from src.data.validate import audit_file
 
 
 class AuditTests(unittest.TestCase):
+    def test_regional_warmth_is_not_an_outlier(self):
+        result = self.audit([[1, "2023-01-01 00:00:00", 5, .2, 15.],
+                             [2, "2023-01-01 00:10:00", 5, .2, 1.4]])
+        temperature = result["numeric"]["temperature"]
+        self.assertFalse(temperature["iqr_diagnostic_enabled"])
+        self.assertEqual(temperature["iqr_outlier_count"], 0)
+        self.assertIsNone(temperature["iqr_upper_fence"])
+        self.assertEqual(temperature["max"], 15.)
+
     def audit(self, rows):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "turbine.csv"

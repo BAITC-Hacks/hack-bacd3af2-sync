@@ -1,6 +1,7 @@
 """Load raw CSV values without deleting, imputing, or clipping observations."""
 from pathlib import Path
 import pandas as pd
+from src.time_utils import local_timestamps
 
 COLUMNS = {
     "ID": "id",
@@ -29,6 +30,7 @@ def parse_raw(raw: pd.DataFrame) -> pd.DataFrame:
     parsed["timestamp"] = pd.to_datetime(
         raw["timestamp"].str.strip(), format="%Y-%m-%d %H:%M:%S", errors="coerce"
     )
+    parsed["timestamp"] = local_timestamps(parsed["timestamp"], errors="coerce")
     for column in NUMERIC_COLUMNS:
         parsed[column] = pd.to_numeric(raw[column], errors="coerce").astype(float)
     return parsed

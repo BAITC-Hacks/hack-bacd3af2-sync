@@ -25,7 +25,7 @@
       "period_end": "2026-01-31T23:50:00",
       "expected_start": "2023-03-11T00:00:00",
       "expected_end": "2026-01-31T23:50:00",
-      "timezone": "unspecified in source; no timezone conversion applied",
+      "timezone": "Asia/Almaty",
       "exact_duplicate_rows_extra": 0,
       "duplicate_timestamps_extra": 0,
       "conflicting_timestamp_groups": 0,
@@ -528,6 +528,7 @@
           "infinity_count": 0,
           "iqr_lower_fence": -15.079999999999998,
           "iqr_upper_fence": 27.689999999999998,
+          "iqr_diagnostic_enabled": true,
           "iqr_outlier_count": 0,
           "constant_runs": []
         },
@@ -540,6 +541,7 @@
           "infinity_count": 0,
           "iqr_lower_fence": -2.0799999999999996,
           "iqr_upper_fence": 2.8199999999999994,
+          "iqr_diagnostic_enabled": true,
           "iqr_outlier_count": 0,
           "constant_runs": [
             {
@@ -1961,8 +1963,9 @@
           "nan_count": 0,
           "invalid_numeric_count": 0,
           "infinity_count": 0,
-          "iqr_lower_fence": -55.75999999999999,
-          "iqr_upper_fence": 86.82999999999998,
+          "iqr_lower_fence": null,
+          "iqr_upper_fence": null,
+          "iqr_diagnostic_enabled": false,
           "iqr_outlier_count": 0,
           "constant_runs": []
         }
@@ -1998,7 +2001,7 @@
       "period_end": "2026-01-31T23:50:00",
       "expected_start": "2023-03-11T00:00:00",
       "expected_end": "2026-01-31T23:50:00",
-      "timezone": "unspecified in source; no timezone conversion applied",
+      "timezone": "Asia/Almaty",
       "exact_duplicate_rows_extra": 0,
       "duplicate_timestamps_extra": 0,
       "conflicting_timestamp_groups": 0,
@@ -3180,6 +3183,7 @@
           "infinity_count": 0,
           "iqr_lower_fence": -15.359999999999998,
           "iqr_upper_fence": 28.04,
+          "iqr_diagnostic_enabled": true,
           "iqr_outlier_count": 0,
           "constant_runs": []
         },
@@ -3192,6 +3196,7 @@
           "infinity_count": 0,
           "iqr_lower_fence": -2.0799999999999996,
           "iqr_upper_fence": 2.8199999999999994,
+          "iqr_diagnostic_enabled": true,
           "iqr_outlier_count": 0,
           "constant_runs": [
             {
@@ -4139,8 +4144,9 @@
           "nan_count": 0,
           "invalid_numeric_count": 0,
           "infinity_count": 0,
-          "iqr_lower_fence": -55.01,
-          "iqr_upper_fence": 87.23,
+          "iqr_lower_fence": null,
+          "iqr_upper_fence": null,
+          "iqr_diagnostic_enabled": false,
           "iqr_outlier_count": 0,
           "constant_runs": []
         }
