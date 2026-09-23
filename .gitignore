@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+ml/data/raw/*.csv
+ml/data/processed/
+tmp/
