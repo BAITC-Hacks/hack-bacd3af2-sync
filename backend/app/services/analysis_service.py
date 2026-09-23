@@ -51,7 +51,7 @@ def build_summary(predictions: dict[int, pd.DataFrame]) -> ForecastSummary:
     )
 
 
-def detect_weather_anomalies(turbine_id: int, weather: pd.DataFrame) -> list[str]:
+def detect_weather_anomalies(turbine_id: int, weather: pd.DataFrame, language: str = "en") -> list[str]:
     name = _turbine_name(turbine_id)
     warnings: list[str] = []
 
@@ -61,7 +61,9 @@ def detect_weather_anomalies(turbine_id: int, weather: pd.DataFrame) -> list[str
         warnings.append(
             f"{name}: wind reaches {worst['wind_speed']:.1f} m/s at {_fmt_time(worst['timestamp'])}, "
             f"above the {CUT_OUT_WIND_SPEED:g} m/s cut-out speed; protective shutdown is likely "
-            f"({len(storm)} h affected)."
+            f"({len(storm)} h affected)." if language != "ru" else
+            f"Турбина {turbine_id}: ветер до {worst['wind_speed']:.1f} м/с в {_fmt_time(worst['timestamp'])}. "
+            f"Превышен порог отключения {CUT_OUT_WIND_SPEED:g} м/с; возможна защитная остановка ({len(storm)} ч)."
         )
 
     cold = weather[weather["temperature"] <= EXTREME_COLD_C]
@@ -69,12 +71,14 @@ def detect_weather_anomalies(turbine_id: int, weather: pd.DataFrame) -> list[str
         coldest = cold.loc[cold["temperature"].idxmin()]
         warnings.append(
             f"{name}: temperature drops to {coldest['temperature']:.1f} °C at "
-            f"{_fmt_time(coldest['timestamp'])}, outside standard cold-climate operating limits."
+            f"{_fmt_time(coldest['timestamp'])}, outside standard cold-climate operating limits." if language != "ru" else
+            f"Турбина {turbine_id}: температура до {coldest['temperature']:.1f} °C в {_fmt_time(coldest['timestamp'])}. "
+            "Возможны ограничения работы из-за холода."
         )
     return warnings
 
 
-def detect_power_anomalies(turbine_id: int, prediction: pd.DataFrame) -> list[str]:
+def detect_power_anomalies(turbine_id: int, prediction: pd.DataFrame, language: str = "en") -> list[str]:
     name = _turbine_name(turbine_id)
     warnings: list[str] = []
     ordered = prediction.sort_values("timestamp").reset_index(drop=True)
@@ -85,7 +89,9 @@ def detect_power_anomalies(turbine_id: int, prediction: pd.DataFrame) -> list[st
         delta = ordered.loc[idx, "predicted_power"] - ordered.loc[idx - 1, "predicted_power"]
         warnings.append(
             f"{name}: sharp ramp of {delta:+.2f} within one hour at "
-            f"{_fmt_time(ordered.loc[idx, 'timestamp'])}; plan balancing reserve."
+            f"{_fmt_time(ordered.loc[idx, 'timestamp'])}; plan balancing reserve." if language != "ru" else
+            f"Турбина {turbine_id}: изменение мощности на {delta:+.2f} за час в "
+            f"{_fmt_time(ordered.loc[idx, 'timestamp'])}. Предусмотрите балансирующий резерв."
         )
 
     suspicious = ordered[
@@ -96,13 +102,16 @@ def detect_power_anomalies(turbine_id: int, prediction: pd.DataFrame) -> list[st
     if not suspicious.empty:
         warnings.append(
             f"{name}: near-zero output predicted for {len(suspicious)} h despite wind above "
-            f"{_STRONG_WIND_FOR_OUTPUT:g} m/s; check for curtailment or model drift."
+            f"{_STRONG_WIND_FOR_OUTPUT:g} m/s; check for curtailment or model drift." if language != "ru" else
+            f"Турбина {turbine_id}: почти нулевая мощность в течение {len(suspicious)} ч при ветре выше "
+            f"{_STRONG_WIND_FOR_OUTPUT:g} м/с. Проверьте ограничения выработки и применимость модели."
         )
 
     if ordered["predicted_power"].mean() < LOW_GENERATION_AVG:
         warnings.append(
             f"{name}: average output below {LOW_GENERATION_AVG:.0%} of rated capacity: "
-            "a calm period is expected."
+            "a calm period is expected." if language != "ru" else
+            f"Турбина {turbine_id}: средняя мощность ниже {LOW_GENERATION_AVG:.0%} номинала; ожидается слабая выработка."
         )
     return warnings
 
@@ -132,7 +141,7 @@ def check_physical_consistency(predictions: dict[int, pd.DataFrame]) -> Consiste
     return ConsistencyCheck(int(calm.sum()), int(windy.sum()), len(frames))
 
 
-RecomputeReason = Literal["clipped", "fallback_weather", "inconsistent"]
+RecomputeReason = Literal["clipped", "fallback_weather", "inconsistent", "updated_weather"]
 RecomputeOutcome = Literal["resolved", "persisted", "failed"]
 
 
@@ -290,6 +299,7 @@ _RU_REASONS: dict[str, str] = {
     "clipped": "часть значений вышла за пределы [0, 1] и была обрезана",
     "fallback_weather": "прогноз строился на резервной погоде, а основной источник снова стал доступен",
     "inconsistent": "заметная доля часов противоречила скорости ветра",
+    "updated_weather": "появились обновлённые погодные данные, доступные на момент прогноза",
 }
 _RU_OUTCOMES: dict[str, str] = {
     "resolved": "пересчитанный прогноз прошёл все проверки и заменил первый.",

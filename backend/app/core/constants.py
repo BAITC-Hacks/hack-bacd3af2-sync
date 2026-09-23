@@ -10,7 +10,7 @@ TurbineId = Literal[1, 2]
 ALLOWED_HORIZONS: Final[tuple[int, ...]] = (24, 48)
 ALLOWED_TURBINE_SETS: Final[tuple[tuple[int, ...], ...]] = ((1,), (2,), (1, 2))
 
-FORECAST_DATE_MIN: Final = date(2026, 2, 1)
+FORECAST_DATE_MIN: Final = date(2026, 1, 31)
 FORECAST_DATE_MAX: Final = date(2026, 2, 28)
 
 

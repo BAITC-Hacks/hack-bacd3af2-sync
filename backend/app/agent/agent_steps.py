@@ -41,6 +41,17 @@ STEP_TITLES: Final[dict[AgentStepId, str]] = {
     "generate_explanation": "Generate explanation",
 }
 
+STEP_TITLES_RU: Final[dict[AgentStepId, str]] = {
+    "fetch_weather": "Получение прогноза погоды",
+    "validate_weather": "Проверка погодных данных",
+    "prepare_features": "Подготовка данных модели",
+    "run_model": "Запуск модели",
+    "validate_prediction": "Проверка прогноза",
+    "analyze_result": "Анализ результата",
+    "recompute": "Повторный расчёт",
+    "generate_explanation": "Формирование объяснения",
+}
+
 
 class StepFailedError(Exception):
     """Raised by a step handler when the pipeline cannot continue."""
@@ -58,6 +69,7 @@ class AgentContext:
     forecast_origin: datetime
     weather: dict[int, pd.DataFrame] = field(default_factory=dict)
     weather_source: str | None = None
+    weather_provenance: dict[int, dict[str, str]] = field(default_factory=dict)
     model_inputs: dict[int, pd.DataFrame] = field(default_factory=dict)
     predictions: dict[int, pd.DataFrame] = field(default_factory=dict)
     model_version: str | None = None
@@ -80,7 +92,7 @@ class AgentContext:
 StepHandler = Callable[[AgentContext], Awaitable[str]]
 
 
-async def execute_step(step_id: AgentStepId, handler: StepHandler, context: AgentContext) -> AgentStep:
+async def execute_step(step_id: AgentStepId, handler: StepHandler, context: AgentContext, language: str = "en") -> AgentStep:
     """Run one step, measuring wall-clock time. The handler returns the step message."""
     started = time.perf_counter()
     status: AgentStepStatus
@@ -93,21 +105,22 @@ async def execute_step(step_id: AgentStepId, handler: StepHandler, context: Agen
         message, status = str(exc), "failed"
     except Exception as exc:  # noqa: BLE001 — any crash must surface as a failed step, not a 500
         logger.exception("Agent step %s crashed", step_id)
-        message, status = f"Unexpected error: {exc}", "failed"
+        message, status = (f"Ошибка выполнения: {exc}" if language == "ru" else f"Unexpected error: {exc}"), "failed"
     duration_ms = round((time.perf_counter() - started) * 1000)
     return AgentStep(
         id=step_id,
-        title=STEP_TITLES[step_id],
+        title=(STEP_TITLES_RU if language == "ru" else STEP_TITLES)[step_id],
         status=status,
         message=message,
         duration_ms=duration_ms,
     )
 
 
-def skipped_step(step_id: AgentStepId, failed_step: AgentStepId) -> AgentStep:
+def skipped_step(step_id: AgentStepId, failed_step: AgentStepId, language: str = "en") -> AgentStep:
     return AgentStep(
         id=step_id,
-        title=STEP_TITLES[step_id],
+        title=(STEP_TITLES_RU if language == "ru" else STEP_TITLES)[step_id],
         status="skipped",
-        message=f"Not executed because “{STEP_TITLES[failed_step]}” failed.",
+        message=(f"Шаг пропущен из-за ошибки на этапе «{STEP_TITLES_RU[failed_step]}»." if language == "ru"
+                 else f"Not executed because “{STEP_TITLES[failed_step]}” failed."),
     )

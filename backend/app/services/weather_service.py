@@ -7,17 +7,21 @@ that is handed to the ModelAdapter. The ML part never fetches weather itself.
 """
 
 import asyncio
+import hashlib
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
+from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import httpx
 import numpy as np
 import pandas as pd
 
 from app.core.constants import SITE_TIMEZONE, TURBINES, WEATHER_COLUMNS, Turbine
-from app.utils.datetime import horizon_end, hourly_range
+from app.utils.datetime import hourly_range
+from scripts.export_weather_backtest import DEFAULT_MODEL, PUBLICATION_DELAY, candidate_runs, extract_block
 
 logger = logging.getLogger(__name__)
 
@@ -86,12 +90,7 @@ class MockWeatherProvider(WeatherProvider):
 
 
 class OpenMeteoWeatherProvider(WeatherProvider):
-    """Open-Meteo Historical Forecast API, for the interactive demo.
-
-    The series is stitched from the first hours of successive model runs, so it is close to
-    analysis, not the forecast issued at forecast_origin (look-ahead). Leakage-free backtest
-    weather comes from backend/scripts/export_weather_backtest.py (Single Runs API).
-    """
+    """An individual archived run published no later than the simulated origin."""
 
     source = "open_meteo"
 
@@ -100,33 +99,101 @@ class OpenMeteoWeatherProvider(WeatherProvider):
         self._timeout_s = timeout_s
 
     async def fetch_hourly(self, turbine: Turbine, start: datetime, hours: int) -> pd.DataFrame:
-        end = horizon_end(start, hours)
-        params: dict[str, str | float] = {
-            "latitude": turbine.latitude,
-            "longitude": turbine.longitude,
-            "hourly": "wind_speed_100m,temperature_2m",
-            "wind_speed_unit": "ms",
-            "timezone": SITE_TIMEZONE,
-            "start_date": start.date().isoformat(),
-            "end_date": end.date().isoformat(),
-        }
+        tz = ZoneInfo(SITE_TIMEZONE)
+        origin = local_origin(start)
         try:
             async with httpx.AsyncClient(timeout=self._timeout_s) as client:
-                response = await client.get(self._base_url, params=params)
-                response.raise_for_status()
-                hourly = response.json()["hourly"]
-        except (httpx.HTTPError, KeyError, ValueError) as exc:
-            raise WeatherProviderError(f"Open-Meteo request failed: {exc}") from exc
+                for run in candidate_runs(origin, 3):
+                    response = await client.get(self._base_url, params={
+                        "latitude": turbine.latitude, "longitude": turbine.longitude,
+                        "hourly": "wind_speed_100m,wind_speed_10m,temperature_2m",
+                        "wind_speed_unit": "ms", "timezone": SITE_TIMEZONE,
+                        "models": DEFAULT_MODEL, "run": run.strftime("%Y-%m-%dT%H:%M"),
+                    })
+                    if response.status_code == 400:
+                        continue
+                    response.raise_for_status()
+                    rows, _, problem = extract_block(response.json(), turbine, origin, run, DEFAULT_MODEL, tz)
+                    if problem:
+                        continue
+                    frame = pd.DataFrame([
+                        {"timestamp": r.timestamp, "wind_speed": r.wind_speed, "temperature": r.temperature,
+                         "forecast_origin": r.forecast_origin, "weather_valid_time": r.weather_valid_time,
+                         "weather_source": r.weather_source, "latitude": r.latitude, "longitude": r.longitude}
+                        for r in rows[:hours]
+                    ])
+                    return validated_archive_block(frame, turbine, start, hours)
+        except (httpx.HTTPError, KeyError, ValueError, TypeError, IndexError) as exc:
+            raise WeatherProviderError(f"Архив Open-Meteo недоступен: {type(exc).__name__}") from exc
+        raise WeatherProviderError("Не найден доступный на момент прогноза погодный запуск.")
 
-        frame = pd.DataFrame(
-            {
-                "timestamp": pd.to_datetime(hourly["time"]),
-                "wind_speed": pd.to_numeric(hourly["wind_speed_100m"], errors="coerce"),
-                "temperature": pd.to_numeric(hourly["temperature_2m"], errors="coerce"),
-            }
-        )
-        window = frame[(frame["timestamp"] >= start) & (frame["timestamp"] <= end)]
-        return window.reset_index(drop=True)
+
+def local_origin(start: datetime) -> datetime:
+    tz = ZoneInfo(SITE_TIMEZONE)
+    return start.replace(tzinfo=tz) if start.tzinfo is None else start.astimezone(tz)
+
+
+def validated_archive_block(frame: pd.DataFrame, turbine: Turbine, start: datetime, hours: int) -> pd.DataFrame:
+    """Validate provenance before discarding archive columns for the model contract."""
+    frame = frame.copy()
+    origin = pd.Timestamp(local_origin(start))
+    for column in ("timestamp", "forecast_origin", "weather_valid_time"):
+        frame[column] = pd.to_datetime(frame[column], utc=True, errors="raise").dt.tz_convert(SITE_TIMEZONE)
+    frame = frame.sort_values("timestamp").reset_index(drop=True)
+    expected = pd.date_range(origin, periods=hours, freq="h")
+    if len(frame) != hours or not (pd.DatetimeIndex(frame.timestamp) == expected).all():
+        raise ValueError("Неполное или повторяющееся почасовое покрытие архива.")
+    if not frame.forecast_origin.eq(origin).all() or not frame.weather_valid_time.le(origin).all():
+        raise ValueError("Погода не была доступна на момент выпуска прогноза.")
+    sources = frame.weather_source.astype(str).unique()
+    # A 10 m wind fallback may be annotated per hour; all rows must still share one run.
+    runs = {source.split(";", 1)[0] for source in sources}
+    if len(runs) != 1 or not next(iter(runs)).startswith(f"open-meteo:single-runs:{DEFAULT_MODEL}:run="):
+        raise ValueError("Ожидается один архивный запуск ECMWF IFS.")
+    source = next(iter(runs))
+    run = pd.Timestamp(source.split("run=", 1)[1])
+    if run.tzinfo is None or run.utcoffset() != timedelta(0):
+        raise ValueError("Время запуска погоды должно быть указано в UTC.")
+    available = run + PUBLICATION_DELAY
+    if not frame.weather_valid_time.eq(available).all():
+        raise ValueError("Время доступности погоды не соответствует её запуску.")
+    values = frame[["wind_speed", "temperature", "latitude", "longitude"]].apply(pd.to_numeric, errors="raise")
+    if not np.isfinite(values.to_numpy()).all():
+        raise ValueError("Архив содержит пропуски или бесконечные значения.")
+    if not np.allclose(values.latitude, turbine.latitude) or not np.allclose(values.longitude, turbine.longitude):
+        raise ValueError("Координаты архива не соответствуют турбине.")
+    frame[["wind_speed", "temperature"]] = values[["wind_speed", "temperature"]]
+    frame["timestamp"] = frame.timestamp.dt.tz_localize(None)
+    result = frame[["timestamp", "wind_speed", "temperature"]].copy()
+    result.attrs["provenance"] = {
+        "source": source, "run_init": run.isoformat(), "available_at": available.isoformat(),
+        "sha256": hashlib.sha256(frame.to_csv(index=False).encode()).hexdigest(),
+    }
+    return result
+
+
+class ArchivedWeatherProvider(WeatherProvider):
+    """Local copy of real Single Runs forecasts; never synthesizes missing data."""
+
+    source = "archive"
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+
+    async def fetch_hourly(self, turbine: Turbine, start: datetime, hours: int) -> pd.DataFrame:
+        return await asyncio.to_thread(self._read, turbine, start, hours)
+
+    def _read(self, turbine: Turbine, start: datetime, hours: int) -> pd.DataFrame:
+        try:
+            frame = pd.read_csv(self.path)
+            origins = pd.to_datetime(frame.forecast_origin, utc=True, errors="raise")
+            targets = pd.to_datetime(frame.timestamp, utc=True, errors="raise")
+            origin = pd.Timestamp(local_origin(start))
+            block = frame.loc[origins.eq(origin) & frame.turbine_id.eq(turbine.turbine_id)
+                              & targets.ge(origin) & targets.lt(origin + timedelta(hours=hours))]
+            return validated_archive_block(block, turbine, start, hours)
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+            raise WeatherProviderError(f"Сохранённый архив погоды непригоден: {exc}") from exc
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,6 +201,10 @@ class WeatherBatch:
     frames: dict[int, pd.DataFrame]
     source: str
     fallback_reason: str | None = None
+
+    @property
+    def provenance(self) -> dict[int, dict[str, str]]:
+        return {key: frame.attrs["provenance"] for key, frame in self.frames.items() if "provenance" in frame.attrs}
 
 
 class WeatherService:
@@ -165,6 +236,20 @@ class WeatherService:
     @property
     def primary_source(self) -> str:
         return self._provider.source
+
+    @staticmethod
+    def inputs_changed(current: dict[int, pd.DataFrame], refreshed: WeatherBatch) -> bool:
+        if current.keys() != refreshed.frames.keys():
+            return True
+        for key, previous in current.items():
+            latest = refreshed.frames[key]
+            if not previous.equals(latest):
+                return True
+            old = previous.attrs.get("provenance", {})
+            new = latest.attrs.get("provenance", {})
+            if old.get("source") != new.get("source"):
+                return True
+        return False
 
     async def get_primary_weather(
         self,

@@ -6,7 +6,8 @@
 **/.env
 **/node_modules
 frontend
-data
+data/*
+!data/weather
 reports
 ml/data
 ml/reports

@@ -56,6 +56,13 @@ class ForecastSummary(BaseModel):
     peak_hour: datetime
 
 
+class WeatherProvenance(BaseModel):
+    source: str
+    run_init: datetime
+    available_at: datetime
+    sha256: str
+
+
 class ForecastResponse(BaseModel):
     forecast_date: date
     horizon_hours: HorizonHours
@@ -69,5 +76,6 @@ class ForecastResponse(BaseModel):
     explanation: str
     model_version: str | None = None
     weather_source: str | None = None
+    weather_provenance: dict[int, WeatherProvenance] = Field(default_factory=dict)
     # "llm" when the explanation was written by the LLM, "template" for the built-in fallback.
     explanation_source: Literal["llm", "template"] | None = None

@@ -17,6 +17,8 @@ COPY ml/src ml/src
 COPY ml/models ml/models
 COPY backend/app backend/app
 COPY backend/models backend/models
+COPY backend/scripts backend/scripts
+COPY data/weather data/weather
 
 WORKDIR /srv/backend
 EXPOSE 8000

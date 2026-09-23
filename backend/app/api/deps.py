@@ -15,6 +15,7 @@ from app.services.forecast_service import ForecastService
 from app.services.llm_explainer import ForecastExplainer, OpenAIExplainer
 from app.services.metrics_service import MetricsService
 from app.services.weather_service import (
+    ArchivedWeatherProvider,
     MockWeatherProvider,
     OpenMeteoWeatherProvider,
     WeatherService,
@@ -34,9 +35,12 @@ def get_model_adapter() -> ModelAdapter:
 @lru_cache
 def get_weather_service() -> WeatherService:
     settings = get_settings()
+    archive = ArchivedWeatherProvider(settings.weather_archive_path)
     if settings.weather_provider == "open_meteo":
         live = OpenMeteoWeatherProvider(settings.open_meteo_url, settings.open_meteo_timeout_s)
-        return WeatherService(provider=live, fallback=MockWeatherProvider())
+        return WeatherService(provider=live, fallback=archive)
+    if settings.weather_provider == "archive":
+        return WeatherService(provider=archive)
     return WeatherService(provider=MockWeatherProvider())
 
 

@@ -59,13 +59,22 @@ def test_forecast_is_deterministic() -> None:
     assert first["turbines"] == second["turbines"]
 
 
+def test_forecast_accepts_january_31() -> None:
+    response = client.post("/api/forecast", json={
+        "forecast_date": "2026-01-31", "horizon_hours": 48, "turbine_ids": [1, 2],
+    })
+    assert response.status_code == 200
+    assert response.json()["status"] == "completed"
+    assert response.json()["turbines"][0]["points"][0]["timestamp"] == "2026-01-31T00:00:00"
+
+
 def test_forecast_rejects_date_outside_february() -> None:
     response = client.post(
         "/api/forecast",
         json={"forecast_date": "2026-03-01", "horizon_hours": 24, "turbine_ids": [1]},
     )
     assert response.status_code == 422
-    assert "forecast_date must be between 2026-02-01 and 2026-02-28" in response.json()["detail"]
+    assert "forecast_date must be between 2026-01-31 and 2026-02-28" in response.json()["detail"]
 
 
 def test_forecast_rejects_invalid_horizon_and_turbines() -> None:

@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     """Application settings, loaded from environment variables and `.env`."""
 
     model_config = SettingsConfigDict(
-        env_file=BACKEND_ROOT / ".env",
+        env_file=(REPO_ROOT / ".env", BACKEND_ROOT / ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
         protected_namespaces=("settings_",),
@@ -35,12 +35,11 @@ class Settings(BaseSettings):
     # Main model bundles (turbine_N/). Earlier-cutoff snapshots live in asof_*/ subdirectories.
     turbine_model_dir: Path = REPO_ROOT / "ml" / "models"
 
-    # Default: live Open-Meteo weather for the real turbine coordinates. "mock" (synthetic weather) only on
-    # explicit request. If Open-Meteo is unreachable mid-run, the agent uses synthetic weather *visibly*:
-    # a warning, weather_source="mock", and analyze_result retries the live API before explaining.
-    weather_provider: Literal["mock", "open_meteo"] = "open_meteo"
-    open_meteo_url: str = "https://historical-forecast-api.open-meteo.com/v1/forecast"
-    open_meteo_timeout_s: float = Field(default=10.0, gt=0)
+    # Both online and offline modes use forecasts available at the requested origin.
+    weather_provider: Literal["mock", "open_meteo", "archive"] = "open_meteo"
+    weather_archive_path: Path = REPO_ROOT / "data" / "weather" / "february_backtest.csv"
+    open_meteo_url: str = "https://single-runs-api.open-meteo.com/v1/forecast"
+    open_meteo_timeout_s: float = Field(default=6.0, gt=0)
 
     # LLM explanation step (OpenAI). Empty key → deterministic template explanation, no network call.
     # The OpenAI SDK reads OPENAI_API_KEY itself; the setting is only used to decide whether the LLM is on.
