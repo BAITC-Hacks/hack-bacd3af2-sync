@@ -1,0 +1,146 @@
+{
+  "1": {
+    "raw_rows": 142360,
+    "raw_sha256": "c4c341582fb2dd348b7187f0128cff265fe055f469413871ebb5db50eef58b5b",
+    "hourly_matches_raw": true,
+    "models": [
+      {
+        "path": "ml\\models\\turbine_1\\model.cbm",
+        "bytes": 562408,
+        "trees": 500,
+        "features": [
+          "wind_speed",
+          "temperature"
+        ],
+        "rows": 23667,
+        "start": "2023-03-11 00:00:00",
+        "end": "2026-01-31 23:00:00",
+        "available_at": "2026-02-01 00:00:00",
+        "refit_max_abs_difference": 0.0
+      },
+      {
+        "path": "ml\\models\\asof_2026-01-31\\turbine_1\\model.cbm",
+        "bytes": 562424,
+        "trees": 500,
+        "features": [
+          "wind_speed",
+          "temperature"
+        ],
+        "rows": 23643,
+        "start": "2023-03-11 00:00:00",
+        "end": "2026-01-30 23:00:00",
+        "available_at": "2026-01-31 00:00:00",
+        "refit_max_abs_difference": 0.0
+      }
+    ],
+    "all_saved_metric_max_difference": 1.1102230246251565e-16,
+    "holdout_reproduction": {
+      "persistence": 0.0,
+      "seasonal_persistence": 0.0,
+      "power_curve": 1.1102230246251565e-16,
+      "catboost_weather": 1.1102230246251565e-16
+    },
+    "holdout_metrics": {
+      "persistence": {
+        "n": 2920,
+        "mae": 0.35203538812785384,
+        "rmse": 0.47500876183539575,
+        "r2": -0.686433670864141,
+        "normalized_mae": 0.35203538812785384
+      },
+      "seasonal_persistence": {
+        "n": 2920,
+        "mae": 0.37386815068493157,
+        "rmse": 0.48905636217159826,
+        "r2": -0.7876555833109067,
+        "normalized_mae": 0.37386815068493157
+      },
+      "power_curve": {
+        "n": 2920,
+        "mae": 0.034566167595398774,
+        "rmse": 0.05643989909664592,
+        "r2": 0.9761911466031843,
+        "normalized_mae": 0.034566167595398774
+      },
+      "catboost_weather": {
+        "n": 2920,
+        "mae": 0.024389374311589197,
+        "rmse": 0.05223852767725607,
+        "r2": 0.9796038649186926,
+        "normalized_mae": 0.024389374311589197
+      }
+    }
+  },
+  "2": {
+    "raw_rows": 149499,
+    "raw_sha256": "820578cd18bb557cd30c2e102f3ae5a386dfc6c489a5a15743339c2b017305e5",
+    "hourly_matches_raw": true,
+    "models": [
+      {
+        "path": "ml\\models\\turbine_2\\model.cbm",
+        "bytes": 562472,
+        "trees": 500,
+        "features": [
+          "wind_speed",
+          "temperature"
+        ],
+        "rows": 24785,
+        "start": "2023-03-11 00:00:00",
+        "end": "2026-01-31 23:00:00",
+        "available_at": "2026-02-01 00:00:00",
+        "refit_max_abs_difference": 0.0
+      },
+      {
+        "path": "ml\\models\\asof_2026-01-31\\turbine_2\\model.cbm",
+        "bytes": 562456,
+        "trees": 500,
+        "features": [
+          "wind_speed",
+          "temperature"
+        ],
+        "rows": 24761,
+        "start": "2023-03-11 00:00:00",
+        "end": "2026-01-30 23:00:00",
+        "available_at": "2026-01-31 00:00:00",
+        "refit_max_abs_difference": 0.0
+      }
+    ],
+    "all_saved_metric_max_difference": 1.734723475976807e-17,
+    "holdout_reproduction": {
+      "persistence": 0.0,
+      "seasonal_persistence": 0.0,
+      "power_curve": 1.1102230246251565e-16,
+      "catboost_weather": 1.1102230246251565e-16
+    },
+    "holdout_metrics": {
+      "persistence": {
+        "n": 2908,
+        "mae": 0.3513147638697845,
+        "rmse": 0.4745823030539599,
+        "r2": -0.7056071879291468,
+        "normalized_mae": 0.3513147638697845
+      },
+      "seasonal_persistence": {
+        "n": 2908,
+        "mae": 0.37202372764786795,
+        "rmse": 0.4878510964472184,
+        "r2": -0.8023142202768512,
+        "normalized_mae": 0.37202372764786795
+      },
+      "power_curve": {
+        "n": 2908,
+        "mae": 0.0399453759603211,
+        "rmse": 0.0830677894682517,
+        "r2": 0.9477457949008682,
+        "normalized_mae": 0.0399453759603211
+      },
+      "catboost_weather": {
+        "n": 2908,
+        "mae": 0.028126239036323327,
+        "rmse": 0.07977380180971298,
+        "r2": 0.9518078259975515,
+        "normalized_mae": 0.028126239036323327
+      }
+    }
+  }
+}
