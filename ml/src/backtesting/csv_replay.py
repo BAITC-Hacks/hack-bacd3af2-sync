@@ -104,7 +104,7 @@ def replay_csv(weather_path, output_dir, start="2026-01-31", end="2026-02-28",
         folder = output_dir / f"{horizon}h"
         folder.mkdir()
         path = folder / "predictions.csv"
-        result.to_csv(path, index=False)
+        result.to_csv(path, index=False, lineterminator="\n")
         record = {"prediction_schema": "section_18", "timezone": TIMEZONE,
                   "forecast_window_hours": horizon, "horizon_hours_definition": "1-based interval lead: target_timestamp = origin + (horizon_hours - 1) hours",
                   "weather_csv": str(weather_path.resolve()), "weather_csv_sha256": hashlib.sha256(blob).hexdigest(),

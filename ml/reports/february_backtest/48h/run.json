@@ -5,7 +5,7 @@
   "horizon_hours_definition": "1-based interval lead: target_timestamp = origin + (horizon_hours - 1) hours",
   "weather_csv": "C:\\Users\\User\\Desktop\\hackalem\\hack-bacd3af2-sync\\data\\weather\\february_backtest.csv",
   "weather_csv_sha256": "1bca88860847492e2f64d16e7788284fd8ef8dd6e59a8a743eeaa9ac0c7eaa3b",
-  "predictions_sha256": "ca11bbfa739a003163b2c3bbe32fd9983bdcc5bffbb67612b1c0ec08685742e7",
+  "predictions_sha256": "40f7d5f4b1ddea6c1b0ede4b51c5a4bb2ae009e1fab0ac5e381dc6f3bd356a59",
   "origin_start": "2026-01-31T00:00:00",
   "origin_end": "2026-02-28T00:00:00",
   "prediction_rows": 2784,

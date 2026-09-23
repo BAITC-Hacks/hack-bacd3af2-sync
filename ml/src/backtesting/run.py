@@ -75,7 +75,7 @@ def replay(manifest_path, output_dir, start="2026-01-31", end="2026-02-28", hori
     result = pd.concat(forecasts, ignore_index=True)
     output_dir.mkdir(parents=True)
     output = output_dir / "predictions.csv"
-    result.to_csv(output, index=False)
+    result.to_csv(output, index=False, lineterminator="\n")
     record = {"timezone": TIMEZONE, "source": manifest["source"], "data_kind": "archived_forecast",
               "provenance_note": "Issue-time provenance is supplied by backend, not independently verified by ML",
               "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),

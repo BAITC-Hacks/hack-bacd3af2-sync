@@ -1,2 +1,2 @@
-# Preserve exact forecast bytes: run.json verifies their SHA-256 on all platforms.
-**/predictions.csv -text
+# Stable forecast bytes: run.json verifies SHA-256 on Windows and Linux.
+**/predictions.csv text eol=lf
