@@ -9,7 +9,7 @@ from src.data.validate import audit_file
 def render_report(summaries: list[dict]) -> str:
     lines = ["# Turbine data quality audit", "",
              "Stage 1: read-only diagnostics. No rows were deleted, imputed or clipped.", "",
-             "Timestamps have no timezone in the CSV. Confirm the source timezone with the data provider before weather joins.", "",
+             "CSV clock times explicitly mean Asia/Almaty. They are preserved without conversion to UTC; backend weather uses the same local hours.", "",
              "## Overview", "",
              "| Metric | Turbine 1 | Turbine 2 |", "| --- | ---: | ---: |"]
     for key in ("rows", "period_start", "period_end", "exact_duplicate_rows_extra",
@@ -37,11 +37,11 @@ def render_report(summaries: list[dict]) -> str:
               "- Gaps are absent slots on the configured 10-minute grid, not fabricated measurements. Full intervals and monthly counts are in data_quality.json.",
               "- Duplicate counts are extra occurrences. Conflicting timestamp groups have different parsed sensor values at the same timestamp.",
               "- NaN counts include missing tokens and unparseable numbers; infinities are counted separately. Finite values alone determine ranges and IQR fences.",
-              "- Outlier flags use Q1 - 3 IQR and Q3 + 3 IQR over the complete historical dataset for diagnostics only. Do not reuse these full-history thresholds in validation-fold cleaning.",
+              "- Wind and power outlier flags use Q1 - 3 IQR and Q3 + 3 IQR for diagnostics only. Temperature IQR flags are disabled: warm nights around +15°C in March or +1.4°C in January are not anomalies for this southern region. Finite temperatures are retained. Do not reuse full-history thresholds in validation-fold cleaning.",
               "- Constant runs require at least 36 equal finite samples at consecutive 10-minute timestamps. Gaps, invalid readings and duplicate timestamps break runs. Zero-power runs may reflect calm wind or shutdowns, so flags alone do not justify deletion.",
               "- The next stage is visual EDA and hourly aggregation, with explicit coverage counts and a documented cleaning policy. Keep future wind standard deviation and other observed-only diagnostics out of production predictors.",
-              "- Training and backtesting are not implemented in this stage. Historical weather forecasts and February 2026 power labels were not supplied; the CSVs cannot establish genuine February forecast performance.",
-              "- The later predict_power interface will consume backend-supplied weather. This package will not fetch weather.", ""]
+              "- This audit does not evaluate forecasts. The supplied CSVs cannot establish genuine February forecast performance.",
+              "- Backend provides real archived forecasts from Open-Meteo Previous Runs / Historical Forecast API, already mapped to wind_speed and temperature in Asia/Almaty. ML performs no weather HTTP requests, wind-height parsing or provider-field renaming.", ""]
     return "\n".join(lines)
 
 

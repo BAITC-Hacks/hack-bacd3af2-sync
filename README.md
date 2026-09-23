@@ -10,7 +10,7 @@
 2. В папке проекта выполните `docker compose up --build` и откройте [localhost:5173](http://localhost:5173).
 3. Выберите **1 февраля 2026**, **Both turbines**, **48h** и нажмите **Run AI Agent**. Изучите график, предупреждения и объяснение.
 
-**В основной ветке `main` приложение пока запускается в демонстрационном режиме.** Обученные модели и отчёты находятся в [ветке `ml`](https://github.com/BAITC-Hacks/hack-bacd3af2-sync/tree/ml), подключение реальной модели — в [ветке `backend`](https://github.com/BAITC-Hacks/hack-bacd3af2-sync/tree/backend). Ниже — результаты проверки настоящей модели, а не демонстрационные числа интерфейса.
+**В основной ветке `main` приложение пока запускается в демонстрационном режиме.** Обученные модели, прогнозы и отчёты уже включены в [папку `ml/`](ml/README.md) этой ветки. Подключение реальной модели к приложению подготовлено в [ветке `backend`](https://github.com/BAITC-Hacks/hack-bacd3af2-sync/tree/backend) и ещё не слито в `main`. Ниже — результаты проверки настоящей модели, а не демонстрационные числа интерфейса.
 
 ## Что показала проверка
 
@@ -50,4 +50,4 @@
 
 Для архивной проверки использованы только прогнозы погоды, доступные на момент расчёта, и модели, обученные на более ранних данных. Фактическая мощность февраля в обучение не входит.
 
-Подробнее: [сравнение моделей](https://github.com/BAITC-Hacks/hack-bacd3af2-sync/blob/ml/ml/reports/model_comparison.md) · [аудит и ограничения](https://github.com/BAITC-Hacks/hack-bacd3af2-sync/blob/ml/ml/reports/ml_audit.md) · [февральские прогнозы](https://github.com/BAITC-Hacks/hack-bacd3af2-sync/blob/ml/ml/reports/february_backtest/README.md) · [инструкции для разработчиков](https://github.com/BAITC-Hacks/hack-bacd3af2-sync/blob/ml/ml/README.md).
+Подробнее: [сравнение моделей](ml/reports/model_comparison.md) · [аудит и ограничения](ml/reports/ml_audit.md) · [февральские прогнозы](ml/reports/february_backtest/README.md) · [инструкции для разработчиков](ml/README.md).

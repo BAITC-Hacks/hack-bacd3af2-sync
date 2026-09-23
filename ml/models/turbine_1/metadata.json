@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "turbine_id": 1,
+  "model_type": "catboost_weather",
+  "model_file": "model.cbm",
+  "model_version": "catboost_weather-65cc90032f20",
+  "artifact_sha256": "65cc90032f20180c44b976655fc0fe88d240f4e25461b4fc9c3849e66cd2dd56",
+  "dataset_sha256": "31b83844e6510544d7360ab7fbbefe8d8d148aee6af131f404bfbb022d7b7058",
+  "training_start": "2023-03-11T00:00:00",
+  "training_end": "2026-01-31T23:00:00",
+  "training_last_available_at": "2026-02-01T00:00:00",
+  "training_cutoff_exclusive": "2026-02-01 00:00:00",
+  "training_rows": 23667,
+  "features": [
+    "wind_speed",
+    "temperature"
+  ],
+  "target": "power_mean",
+  "parameters": {
+    "iterations": 500,
+    "depth": 6,
+    "learning_rate": 0.05,
+    "loss_function": "MAE",
+    "l2_leaf_reg": 5,
+    "random_seed": 42,
+    "thread_count": 4,
+    "allow_writing_files": false,
+    "verbose": false
+  },
+  "created_at": "2026-09-23T09:52:53.002492+00:00",
+  "python_version": "3.12.14",
+  "package_versions": {
+    "numpy": "2.3.5",
+    "pandas": "3.0.1",
+    "catboost": "1.2.8",
+    "scikit-learn": "1.7.2",
+    "scipy": "1.16.3",
+    "joblib": "1.5.2"
+  },
+  "evaluation_kind": "observed_weather_proxy",
+  "timezone": "Asia/Almaty",
+  "selection_rule": "Lowest equally weighted mean MAE across three pre-holdout windows",
+  "selection_mean_mae": {
+    "power_curve": 0.02803009268639811,
+    "hist_gradient_boosting": 0.021885751650235697,
+    "catboost_weather": 0.021475135692248033,
+    "catboost_calendar": 0.021702315940211814
+  },
+  "holdout_metrics": {
+    "n": 2920,
+    "mae": 0.024389374311589197,
+    "rmse": 0.05223852767725607,
+    "r2": 0.9796038649186926,
+    "normalized_mae": 0.024389374311589197
+  },
+  "serialization_roundtrip_verified": true,
+  "postprocessing": "clip [0,1] and count corrections",
+  "limitations": [
+    "Validation scores use observed weather and do not measure operational forecasting accuracy; February backtest uses backend-exported Open-Meteo Single Runs API forecasts (ecmwf_ifs), but accuracy is not evaluated because February actual power is unavailable",
+    "Final model includes holdout history; holdout score belongs to the pre-holdout fit",
+    "No February data read or used; no lag features"
+  ],
+  "feature_importance": {
+    "wind_speed": 96.03689690991833,
+    "temperature": 3.9631030900816726
+  },
+  "timestamp_representation": "Asia/Almaty wall-clock; no UTC conversion",
+  "weather_provider": "backend: Open-Meteo Single Runs API (ecmwf_ifs) archive export",
+  "weather_input_columns": [
+    "timestamp",
+    "wind_speed",
+    "temperature",
+    "forecast_origin",
+    "latitude",
+    "longitude"
+  ]
+}

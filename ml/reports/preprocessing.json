@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "turbines": [
+    {
+      "turbine_id": 1,
+      "timezone": "Asia/Almaty",
+      "input_rows": 142360,
+      "invalid_timestamp_rows": 0,
+      "outside_period_rows": 0,
+      "off_grid_rows_in_period": 0,
+      "accepted_timestamp_rows": 142360,
+      "masked_cells": {
+        "wind_speed": 0,
+        "power": 0,
+        "temperature": 0
+      },
+      "hours": 25392,
+      "empty_hours": 1629,
+      "partial_hours": 96,
+      "full_observation_hours": 23667,
+      "training_eligible_hours": 23667,
+      "start": "2023-03-11T00:00:00",
+      "end": "2026-01-31T23:50:00",
+      "source_file": "turbine 1.csv",
+      "sha256": "c4c341582fb2dd348b7187f0128cff265fe055f469413871ebb5db50eef58b5b"
+    },
+    {
+      "turbine_id": 2,
+      "timezone": "Asia/Almaty",
+      "input_rows": 149499,
+      "invalid_timestamp_rows": 0,
+      "outside_period_rows": 0,
+      "off_grid_rows_in_period": 0,
+      "accepted_timestamp_rows": 149499,
+      "masked_cells": {
+        "wind_speed": 0,
+        "power": 0,
+        "temperature": 0
+      },
+      "hours": 25392,
+      "empty_hours": 388,
+      "partial_hours": 219,
+      "full_observation_hours": 24785,
+      "training_eligible_hours": 24785,
+      "start": "2023-03-11T00:00:00",
+      "end": "2026-01-31T23:50:00",
+      "source_file": "turbine 2.csv",
+      "sha256": "820578cd18bb557cd30c2e102f3ae5a386dfc6c489a5a15743339c2b017305e5"
+    }
+  ]
+}

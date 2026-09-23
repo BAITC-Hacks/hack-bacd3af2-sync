@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "turbine_id": 2,
+  "model_type": "catboost_weather",
+  "model_file": "model.cbm",
+  "model_version": "catboost_weather-fdf91cfc68b6",
+  "artifact_sha256": "fdf91cfc68b6255eb612c57059302487ea40dcd0f66e0f1cd9d60e1eaf908d34",
+  "dataset_sha256": "eae6c5001c53e59765017f847842a94f7526780e27434c5cc04578f17d74b050",
+  "training_start": "2023-03-11T00:00:00",
+  "training_end": "2026-01-30T23:00:00",
+  "training_last_available_at": "2026-01-31T00:00:00",
+  "training_cutoff_exclusive": "2026-01-31T00:00:00",
+  "training_rows": 24761,
+  "features": [
+    "wind_speed",
+    "temperature"
+  ],
+  "target": "power_mean",
+  "parameters": {
+    "iterations": 500,
+    "depth": 6,
+    "learning_rate": 0.05,
+    "loss_function": "MAE",
+    "l2_leaf_reg": 5,
+    "random_seed": 42,
+    "thread_count": 4,
+    "allow_writing_files": false,
+    "verbose": false
+  },
+  "created_at": "2026-09-23T10:15:32.326074+00:00",
+  "python_version": "3.12.14",
+  "package_versions": {
+    "numpy": "2.3.5",
+    "pandas": "3.0.1",
+    "catboost": "1.2.8",
+    "scikit-learn": "1.7.2",
+    "scipy": "1.16.3",
+    "joblib": "1.5.2"
+  },
+  "evaluation_kind": "observed_weather_proxy",
+  "timezone": "Asia/Almaty",
+  "selection_rule": "Lowest equally weighted mean MAE across three pre-holdout windows",
+  "selection_mean_mae": {
+    "power_curve": 0.018996958589381992,
+    "hist_gradient_boosting": 0.013876544381806627,
+    "catboost_weather": 0.013788535839775832,
+    "catboost_calendar": 0.013845581418282163
+  },
+  "serialization_roundtrip_verified": true,
+  "postprocessing": "clip [0,1] and count corrections",
+  "limitations": [
+    "No February data used",
+    "Archived weather performance has not been evaluated for this snapshot"
+  ],
+  "feature_importance": {
+    "wind_speed": 97.41240866990512,
+    "temperature": 2.5875913300948765
+  },
+  "timestamp_representation": "Asia/Almaty wall-clock; no UTC conversion",
+  "weather_provider": "backend: Open-Meteo Single Runs API (ecmwf_ifs) archive export",
+  "weather_input_columns": [
+    "timestamp",
+    "wind_speed",
+    "temperature",
+    "forecast_origin",
+    "latitude",
+    "longitude"
+  ],
+  "selection_available_at": "2025-12-01",
+  "snapshot_note": "Pre-holdout selection retained; refit on hours available at cutoff; no snapshot holdout evaluation"
+}

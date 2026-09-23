@@ -9,6 +9,7 @@ from src.config import (
     EXPECTED_START, IQR_MULTIPLIER,
 )
 from src.data.load import NUMERIC_COLUMNS, load_raw, parse_raw
+from src.config import TIMEZONE, IQR_DIAGNOSTIC_COLUMNS
 
 
 def missing_intervals(missing: pd.DatetimeIndex, cadence: pd.Timedelta) -> list[dict]:
@@ -68,8 +69,9 @@ def audit_file(path: str | Path, turbine_id: int, *,
         values = data[column]
         finite = values[np.isfinite(values)]
         q1, q3 = (float(finite.quantile(q)) if len(finite) else None for q in (.25, .75))
-        low = q1 - IQR_MULTIPLIER * (q3 - q1) if q1 is not None else None
-        high = q3 + IQR_MULTIPLIER * (q3 - q1) if q3 is not None else None
+        enabled = column in IQR_DIAGNOSTIC_COLUMNS
+        low = q1 - IQR_MULTIPLIER * (q3 - q1) if q1 is not None and enabled else None
+        high = q3 + IQR_MULTIPLIER * (q3 - q1) if q3 is not None and enabled else None
         missing = raw[column].str.strip().str.lower().isin(missing_tokens)
         numeric[column] = {
             "min": float(finite.min()) if len(finite) else None,
@@ -79,7 +81,8 @@ def audit_file(path: str | Path, turbine_id: int, *,
             "invalid_numeric_count": int((values.isna() & ~missing).sum()),
             "infinity_count": int(np.isinf(values).sum()),
             "iqr_lower_fence": low, "iqr_upper_fence": high,
-            "iqr_outlier_count": int(((finite < low) | (finite > high)).sum()) if len(finite) else 0,
+            "iqr_diagnostic_enabled": enabled,
+            "iqr_outlier_count": int(((finite < low) | (finite > high)).sum()) if len(finite) and enabled else 0,
             "constant_runs": constant_runs(data, column, cadence, constant_min_observations),
         }
     valid = data.loc[data.timestamp.notna()]
@@ -95,7 +98,7 @@ def audit_file(path: str | Path, turbine_id: int, *,
         "period_start": times.min().isoformat() if len(times) else None,
         "period_end": times.max().isoformat() if len(times) else None,
         "expected_start": start.isoformat(), "expected_end": end.isoformat(),
-        "timezone": "unspecified in source; no timezone conversion applied",
+        "timezone": TIMEZONE,
         "exact_duplicate_rows_extra": int(raw.duplicated().sum()),
         "duplicate_timestamps_extra": int(duplicate_times.sum()),
         "conflicting_timestamp_groups": int(conflicting.sum()),

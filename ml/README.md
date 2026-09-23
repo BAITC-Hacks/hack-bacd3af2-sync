@@ -1,53 +1,66 @@
-# Wind turbine ML
+# ML: краткая инструкция разработчикам
 
-Stage 1 implements reproducible ingestion and data auditing for both turbines.
-The supplied task requests staged delivery with an audit before model training.
+Здесь находятся обученные модели двух турбин, подготовка данных, прогнозирование, тесты и отчёты. **Для получения прогнозов переобучать модели не нужно.** Они используют только скорость ветра и температуру и возвращают относительную мощность от 0 до 1.
 
-## Setup and run
+## Где что находится
 
-Python 3.11 or newer. From the repository root:
+| Что нужно | Путь внутри `ml/` |
+| --- | --- |
+| Функция `predict_power` | `src/inference/predict.py` |
+| Основные модели и их описание | `models/turbine_1/`, `models/turbine_2/` |
+| Модели для прогноза от 31 января | `models/asof_2026-01-31/` |
+| Результаты и графики | `reports/`, `reports/figures/` |
+| Таймзона, даты, пути и seed | `src/config.py` |
 
-```powershell
-py -m venv .venv
-.venv/Scripts/python -m pip install -r ml/requirements.txt
-cd ml
-../.venv/Scripts/python -m src.data.audit --turbine-1 "C:/Users/User/Downloads/turbine 1.csv" --turbine-2 "C:/Users/User/Downloads/turbine 2.csv"
-../.venv/Scripts/python -m unittest discover -s tests -v
-```
+## Подготовка среды
 
-On other platforms use `python3` and `.venv/bin/python`. Alternatively place the
-two files in `ml/data/raw/` and omit the file arguments. Raw data is ignored by Git.
-Paths are CLI parameters; defaults and diagnostic thresholds live in `src/config.py`.
+Нужен Python 3.11 или новее; аудит выполнен на Python 3.12. Создайте отдельное виртуальное окружение и установите зависимости: `python -m pip install -r ml/requirements.txt` из корня проекта.
 
-Outputs:
+**Для backend используйте `ml/requirements-inference.txt`**, а не зависимости обучения: версии согласованы с сервером. Подробное подключение описано в [инструкции адаптера](integration/README.md).
 
-- `reports/data_quality.json`: complete gaps, constant runs, missing values,
-  parse errors, duplicates, physical range flags, spacing and monthly counts.
-- `reports/data_quality.md`: human-readable summary and largest missing intervals.
+Дальнейшие команды выполняются из папки `ml/` в подготовленной среде.
 
-Original CSVs are read only. UTF-8 headers are mapped explicitly, ID stays out
-of numeric features, and invalid parsed values remain visible in audit counts.
-SHA-256 fingerprints identify the input files. Output is deterministic for the
-same input bytes and settings. Grid coverage includes missing boundary samples
-within the configured study period. Source timestamps have no known timezone;
-do not assume UTC or use the workstation timezone for weather joins.
+## Подключение модели
 
-## Delivery stages
+Функция: `predict_power(turbine_id, weather, horizon_hours, forecast_origin)`.
 
-1. **Complete:** input loading, automated data audit, reports and audit tests.
-2. Visual EDA, documented cleaning rules and hourly aggregation with coverage counts.
-3. Reusable features, chronological validation, persistence and power-curve baselines,
-   candidate models, selection metrics and saved artifacts for each turbine.
-4. Validated inference and backend integration, then historical forecast backtesting.
+- `turbine_id`: 1 или 2; `horizon_hours`: 24 или 48.
+- `weather`: таблица с колонками `timestamp`, `wind_speed`, `temperature`, `forecast_origin`, `latitude`, `longitude`.
+- Погоду получает backend. ML не скачивает её и не переименовывает поля провайдера.
+- Время — **Asia/Almaty**. Значения без указанной зоны считаются местными; молчаливого перевода часов в UTC нет.
+- Таблица должна содержать ровно 24 или 48 последовательных часов, начиная с момента прогноза.
 
-The planned backend API is
-`predict_power(turbine_id, weather, horizon_hours, forecast_origin)`.
-Weather input columns: `timestamp`, `wind_speed`, `temperature`,
-`forecast_origin`, `latitude`, `longitude`. Output columns: `forecast_origin`,
-`timestamp`, `turbine_id`, `horizon_hour`, `wind_speed`, `temperature`,
-`predicted_power`, `model_version`. Only 24- and 48-hour horizons are intended.
-This API is not implemented yet. Weather retrieval belongs to the backend.
+Результат: `forecast_origin`, `timestamp`, `turbine_id`, `horizon_hour`, `wind_speed`, `temperature`, `predicted_power`, `model_version`. Первый интервал имеет номер 1 и начинается в `forecast_origin`. Загрузка модели кэшируется; ошибки данных и повреждённые файлы не заменяются заглушками.
 
-No February 2026 labels or archived weather forecasts were provided. Future
-observed weather cannot substitute for forecasts available at each historical
-origin. Model training, honest forecast evaluation and deployment are later stages.
+Основные модели допустимы с **1 февраля 2026, 00:00**. Для 31 января нужно выбрать ранние модели; архивный прогон делает это автоматически. Для отдельного вызова можно задать `TURBINE_MODEL_DIR` с путём к ранним моделям. Не применяйте финальные модели к более ранней дате.
+
+## Проверка без обучения
+
+| Действие | Команда из `ml/` |
+| --- | --- |
+| Запустить ML-тесты | `python -m unittest discover -s tests -v` |
+| Повторить февральские прогнозы | `python -m src.backtesting.run --output-dir reports/replay_check` |
+| Обновить четыре графика для README | `python -m src.analysis.readme_figures` |
+
+Для повторного прогона указывайте **новую папку**, которой ещё нет. По умолчанию используется CSV `data/weather/february_backtest.csv` из корня репозитория. Погодный API не вызывается, фактическая мощность не читается.
+
+Когда появится февральский факт, его можно оценить отдельно: `python -m src.backtesting.evaluate --run-dir reports/replay_check/48h --actuals data/february_actuals.csv --output reports/february_metrics.json`. Файл факта должен содержать только `timestamp`, `turbine_id`, `power_mean` с полными почасовыми измерениями; сейчас этого файла нет. Для горизонта 24 часа используйте соответствующую папку и другое имя результата.
+
+## Воспроизведение на исходных данных
+
+Положите исходные `turbine 1.csv` и `turbine 2.csv` в `ml/data/raw/`. Сырые и обработанные данные не хранятся в Git.
+
+1. Проверка качества: `python -m src.data.audit`.
+2. Почасовая агрегация: `python -m src.data.preprocess`.
+3. Исследовательские графики: `python -m src.analysis.eda`.
+4. При необходимости — новое обучение в отдельные папки: `python -m src.training.train --turbine all --model-dir models/retrained --report-dir reports/retrained`.
+
+Для воспроизведения аудита после агрегации: `python scripts/verify_audit.py --raw-dir data/raw`. Скрипт переобучает модели в памяти и сверяет их с поставленными, не перезаписывая модели. Он сохраняет результат в `reports/audit_verification.json`; запускайте без опции `-O`.
+
+## Правила честной оценки
+
+Обучение использует только доступные прошлые часы; февральские строки отвергаются. Для выбора модели использованы июнь, сентябрь и ноябрь 2025, затем независимая проверка за декабрь–январь. Финальные модели переобучены по 31 января, но опубликованные метрики относятся к проверке более ранних моделей.
+
+Лаги мощности и будущие внутричасовые измерения в признаки не входят. Тёплые температуры для юга Казахстана не считаются выбросами. **Метрики на фактической погоде не равны точности всей цепочки с прогнозом погоды.**
+
+Результаты: [сравнение моделей](reports/model_comparison.md) · [аудит](reports/ml_audit.md) · [февральские прогнозы](reports/february_backtest/README.md).
