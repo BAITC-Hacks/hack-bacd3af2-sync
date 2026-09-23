@@ -1,0 +1,20 @@
+{
+  "runtime_implementation_commit": "5615978",
+  "backend_tests_passed": 82,
+  "ml_tests_passed": 58,
+  "frontend_typecheck_and_build": "passed",
+  "docker_compose_build_and_start": "passed",
+  "clean_main_backend_image_build": "passed",
+  "clean_image_without_key_or_network": {
+    "status": "passed",
+    "dates": ["2026-01-31", "2026-02-01"],
+    "horizon_hours": 48,
+    "turbines": [1, 2],
+    "model": "real CatBoost",
+    "weather_source": "archive",
+    "explanation_source": "template"
+  },
+  "full_period_agent_replay": "agent_backtest/manifest.json",
+  "live_weather_and_openai_checks": "delivery_checks.json",
+  "scope": "Runtime checks and model tests, not a measurement of February prediction accuracy."
+}

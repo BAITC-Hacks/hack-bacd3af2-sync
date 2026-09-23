@@ -1,0 +1,355 @@
+{
+  "checked_at": "2026-09-23T12:41:08.936946+00:00",
+  "health": {
+    "status": "ok",
+    "service": "wind-ai-backend"
+  },
+  "metrics_source": "holdout",
+  "frontend_assets_checked": 2,
+  "forecasts": [
+    {
+      "forecast_date": "2026-01-31",
+      "horizon_hours": 48,
+      "status": "completed",
+      "duration_seconds": 6.61,
+      "weather_source": "open_meteo",
+      "weather_provenance": {
+        "1": {
+          "source": "open-meteo:single-runs:ecmwf_ifs:run=2026-01-30T12:00Z",
+          "run_init": "2026-01-30T12:00:00Z",
+          "available_at": "2026-01-30T18:00:00Z",
+          "sha256": "b48ec2163dc7216dd025a241630faa3f35f3968cc301f3b1e56107ba1887cccf"
+        },
+        "2": {
+          "source": "open-meteo:single-runs:ecmwf_ifs:run=2026-01-30T12:00Z",
+          "run_init": "2026-01-30T12:00:00Z",
+          "available_at": "2026-01-30T18:00:00Z",
+          "sha256": "1755c669886334cf0e1b20be682c40aa836505e332bedcfe5a856103c954f36d"
+        }
+      },
+      "model_version": "catboost_weather-3a4caa2b356e, catboost_weather-fdf91cfc68b6",
+      "explanation_source": "llm",
+      "explanation": "Ожидается, что средний уровень генерации составит 26,6% от номинальной мощности ветровых турбин. Пиковые значения мощности, достигающие до 68,5%, будут наблюдаться 31 января в 09:00, 12:00 и 13:00, когда скорость ветра составит 8,9 м/с. В период с 31 января 19:00 до 1 февраля 15:00 ожидается низкий уровень выработки энергии, где мощность упадет до минимального значения 0,9%. Если рассматривать отдельные турбины, то Турбина 1 будет иметь среднюю мощность 27,4%, а Турбина 2 - 25,9%. Прогноз не пересчитывался, и в процессе самопроверки не было найдено причин для этого.",
+      "agent_steps": [
+        {
+          "id": "fetch_weather",
+          "title": "Получение прогноза погоды",
+          "status": "completed",
+          "message": "Загружена погода на 48 ч для турбин 1, 2. Источник: open_meteo. Проверена доступность архива на момент прогноза.",
+          "duration_ms": 1982
+        },
+        {
+          "id": "validate_weather",
+          "title": "Проверка погодных данных",
+          "status": "completed",
+          "message": "Проверено 96 строк: структура, почасовая непрерывность и допустимые диапазоны.",
+          "duration_ms": 45
+        },
+        {
+          "id": "prepare_features",
+          "title": "Подготовка данных модели",
+          "status": "completed",
+          "message": "Подготовлены данные для 2 турбин на 48 ч. Средний ветер: 5.4 м/с.",
+          "duration_ms": 7
+        },
+        {
+          "id": "run_model",
+          "title": "Запуск модели",
+          "status": "completed",
+          "message": "Модель CatBoost рассчитала 96 почасовых значений для турбин 1, 2.",
+          "duration_ms": 155
+        },
+        {
+          "id": "validate_prediction",
+          "title": "Проверка прогноза",
+          "status": "completed",
+          "message": "Проверено 96 значений: почасовой шаг, отсутствие пропусков и диапазон [0, 1].",
+          "duration_ms": 33
+        },
+        {
+          "id": "analyze_result",
+          "title": "Анализ результата",
+          "status": "completed",
+          "message": "Пересчёт не требуется. Несогласованных часов: 0/96; ограниченных значений: 0. Проверено обновление погоды.",
+          "duration_ms": 494
+        },
+        {
+          "id": "recompute",
+          "title": "Повторный расчёт",
+          "status": "skipped",
+          "message": "Анализ не выявил причин для пересчёта.",
+          "duration_ms": 0
+        },
+        {
+          "id": "generate_explanation",
+          "title": "Формирование объяснения",
+          "status": "completed",
+          "message": "OpenAI (gpt-4o-mini): объяснение по 16 группам фактов, предупреждениям и решению о пересчёте.",
+          "duration_ms": 3757
+        }
+      ],
+      "point_counts": [
+        48,
+        48
+      ]
+    },
+    {
+      "forecast_date": "2026-02-01",
+      "horizon_hours": 24,
+      "status": "completed",
+      "duration_seconds": 5.28,
+      "weather_source": "open_meteo",
+      "weather_provenance": {
+        "1": {
+          "source": "open-meteo:single-runs:ecmwf_ifs:run=2026-01-31T12:00Z",
+          "run_init": "2026-01-31T12:00:00Z",
+          "available_at": "2026-01-31T18:00:00Z",
+          "sha256": "3556b31f2e7ee88108bb28ba78c77e90682b3786c0e618f37e045e96373efcaa"
+        },
+        "2": {
+          "source": "open-meteo:single-runs:ecmwf_ifs:run=2026-01-31T12:00Z",
+          "run_init": "2026-01-31T12:00:00Z",
+          "available_at": "2026-01-31T18:00:00Z",
+          "sha256": "f9254f5a88bf801486802dda065fa6462d594b3a019c55783627baf06a5b6a82"
+        }
+      },
+      "model_version": "catboost_weather-16a0619417f5, catboost_weather-65cc90032f20",
+      "explanation_source": "llm",
+      "explanation": "Прогноз показывает, что средний уровень генерации составляет 6,1% от номинальной мощности, с максимальной мощностью в 19,9% в 23:00, когда ожидается скорость ветра 6,1 м/с. Наиболее высокая генерация также прогнозируется в 21:00 (16,3%) и 20:00 (14,8%). С 00:00 до 17:00 наблюдается окно с низким уровнем выработки, когда мощность будет составлять всего 0,9%. Оба турбина в этом прогнозе имеют среднюю мощность ниже 10% от номинала, что указывает на ожидаемую слабую выработку. Прогноз не был пересчитан, так как самопроверка не выявила необходимости в этом.",
+      "agent_steps": [
+        {
+          "id": "fetch_weather",
+          "title": "Получение прогноза погоды",
+          "status": "completed",
+          "message": "Загружена погода на 24 ч для турбин 1, 2. Источник: open_meteo. Проверена доступность архива на момент прогноза.",
+          "duration_ms": 468
+        },
+        {
+          "id": "validate_weather",
+          "title": "Проверка погодных данных",
+          "status": "completed",
+          "message": "Проверено 48 строк: структура, почасовая непрерывность и допустимые диапазоны.",
+          "duration_ms": 5
+        },
+        {
+          "id": "prepare_features",
+          "title": "Подготовка данных модели",
+          "status": "completed",
+          "message": "Подготовлены данные для 2 турбин на 24 ч. Средний ветер: 3.7 м/с.",
+          "duration_ms": 5
+        },
+        {
+          "id": "run_model",
+          "title": "Запуск модели",
+          "status": "completed",
+          "message": "Модель CatBoost рассчитала 48 почасовых значений для турбин 1, 2.",
+          "duration_ms": 24
+        },
+        {
+          "id": "validate_prediction",
+          "title": "Проверка прогноза",
+          "status": "completed",
+          "message": "Проверено 48 значений: почасовой шаг, отсутствие пропусков и диапазон [0, 1]. Предупреждений: 2.",
+          "duration_ms": 7
+        },
+        {
+          "id": "analyze_result",
+          "title": "Анализ результата",
+          "status": "completed",
+          "message": "Пересчёт не требуется. Несогласованных часов: 0/48; ограниченных значений: 0. Проверено обновление погоды.",
+          "duration_ms": 491
+        },
+        {
+          "id": "recompute",
+          "title": "Повторный расчёт",
+          "status": "skipped",
+          "message": "Анализ не выявил причин для пересчёта.",
+          "duration_ms": 0
+        },
+        {
+          "id": "generate_explanation",
+          "title": "Формирование объяснения",
+          "status": "completed",
+          "message": "OpenAI (gpt-4o-mini): объяснение по 16 группам фактов, предупреждениям и решению о пересчёте.",
+          "duration_ms": 4210
+        }
+      ],
+      "point_counts": [
+        24,
+        24
+      ]
+    },
+    {
+      "forecast_date": "2026-02-12",
+      "horizon_hours": 24,
+      "status": "completed",
+      "duration_seconds": 8.46,
+      "weather_source": "open_meteo",
+      "weather_provenance": {
+        "1": {
+          "source": "open-meteo:single-runs:ecmwf_ifs:run=2026-02-11T12:00Z",
+          "run_init": "2026-02-11T12:00:00Z",
+          "available_at": "2026-02-11T18:00:00Z",
+          "sha256": "cb44363a04e0f4692accaa5c90dc3577def894e466f6c71954a7d01364b7914d"
+        },
+        "2": {
+          "source": "open-meteo:single-runs:ecmwf_ifs:run=2026-02-11T12:00Z",
+          "run_init": "2026-02-11T12:00:00Z",
+          "available_at": "2026-02-11T18:00:00Z",
+          "sha256": "b49759c2f43cd81e4110f3742d777d0355cc73dd474ac4ae2ed42eca5b7433db"
+        }
+      },
+      "model_version": "catboost_weather-16a0619417f5, catboost_weather-65cc90032f20",
+      "explanation_source": "llm",
+      "explanation": "Прогноз на 12 февраля 2026 года показывает, что среднее значение выработки электроэнергии в парке турбин составит 7.7% от их номинальной мощности, с возможным пиковым значением в 56.2% в ночное время с 00:00 до 01:00 под воздействием ветра со скоростью 8.2 м/с. Ожидается слабая выработка в течение всего дня с 5:00 до 23:00, когда мощность упадет до минимально возможного значения 0.9%. Оба устройства имеют среднюю мощность ниже 10% номинала, что указывает на предстоящую низкую производительность. Прогноз не был пересчитан, так как самообследование не выявило причин для изменений.",
+      "agent_steps": [
+        {
+          "id": "fetch_weather",
+          "title": "Получение прогноза погоды",
+          "status": "completed",
+          "message": "Загружена погода на 24 ч для турбин 1, 2. Источник: open_meteo. Проверена доступность архива на момент прогноза.",
+          "duration_ms": 521
+        },
+        {
+          "id": "validate_weather",
+          "title": "Проверка погодных данных",
+          "status": "completed",
+          "message": "Проверено 48 строк: структура, почасовая непрерывность и допустимые диапазоны.",
+          "duration_ms": 4
+        },
+        {
+          "id": "prepare_features",
+          "title": "Подготовка данных модели",
+          "status": "completed",
+          "message": "Подготовлены данные для 2 турбин на 24 ч. Средний ветер: 3.5 м/с.",
+          "duration_ms": 2
+        },
+        {
+          "id": "run_model",
+          "title": "Запуск модели",
+          "status": "completed",
+          "message": "Модель CatBoost рассчитала 48 почасовых значений для турбин 1, 2.",
+          "duration_ms": 25
+        },
+        {
+          "id": "validate_prediction",
+          "title": "Проверка прогноза",
+          "status": "completed",
+          "message": "Проверено 48 значений: почасовой шаг, отсутствие пропусков и диапазон [0, 1]. Предупреждений: 2.",
+          "duration_ms": 7
+        },
+        {
+          "id": "analyze_result",
+          "title": "Анализ результата",
+          "status": "completed",
+          "message": "Пересчёт не требуется. Несогласованных часов: 0/48; ограниченных значений: 0. Проверено обновление погоды.",
+          "duration_ms": 410
+        },
+        {
+          "id": "recompute",
+          "title": "Повторный расчёт",
+          "status": "skipped",
+          "message": "Анализ не выявил причин для пересчёта.",
+          "duration_ms": 0
+        },
+        {
+          "id": "generate_explanation",
+          "title": "Формирование объяснения",
+          "status": "completed",
+          "message": "OpenAI (gpt-4o-mini): объяснение по 16 группам фактов, предупреждениям и решению о пересчёте.",
+          "duration_ms": 7045
+        }
+      ],
+      "point_counts": [
+        24,
+        24
+      ]
+    },
+    {
+      "forecast_date": "2026-02-20",
+      "horizon_hours": 48,
+      "status": "completed",
+      "duration_seconds": 4.52,
+      "weather_source": "open_meteo",
+      "weather_provenance": {
+        "1": {
+          "source": "open-meteo:single-runs:ecmwf_ifs:run=2026-02-19T12:00Z",
+          "run_init": "2026-02-19T12:00:00Z",
+          "available_at": "2026-02-19T18:00:00Z",
+          "sha256": "f51eef8862302c8d42ef2f1aedc3a2bd50f5a107bfcf8999f1fdfd33b163b72d"
+        },
+        "2": {
+          "source": "open-meteo:single-runs:ecmwf_ifs:run=2026-02-19T12:00Z",
+          "run_init": "2026-02-19T12:00:00Z",
+          "available_at": "2026-02-19T18:00:00Z",
+          "sha256": "cfd0cefed6dbf46a907597385186373c951f26c76917dc9fabdba3421f32a9f8"
+        }
+      },
+      "model_version": "catboost_weather-16a0619417f5, catboost_weather-65cc90032f20",
+      "explanation_source": "llm",
+      "explanation": "Ожидаемый уровень генерации на ближайшие 48 часов составит в среднем 32,2% от номинальной мощности. Пиковая мощность будет наблюдаться 21 февраля в 12:00, когда она достигнет 98,1% при скорости ветра 13,4 м/с. В период с 12:00 до 19:00 20 февраля ожидается низкая выработка, при этом минимальная мощность составит всего 0,9%. Турбина 1 покажет среднюю мощность 33%, а Турбина 2 — 31,5%, что указывает на небольшое различие в производительности. Важно отметить, что прогноз не был перерасчитан, так как самопроверка не выявила оснований для этого, но учтите предупреждения о значительном изменении мощности у обеих турбин в 11:00 21 февраля, что требует наличия балансирующего резерва.",
+      "agent_steps": [
+        {
+          "id": "fetch_weather",
+          "title": "Получение прогноза погоды",
+          "status": "completed",
+          "message": "Загружена погода на 48 ч для турбин 1, 2. Источник: open_meteo. Проверена доступность архива на момент прогноза.",
+          "duration_ms": 656
+        },
+        {
+          "id": "validate_weather",
+          "title": "Проверка погодных данных",
+          "status": "completed",
+          "message": "Проверено 96 строк: структура, почасовая непрерывность и допустимые диапазоны.",
+          "duration_ms": 5
+        },
+        {
+          "id": "prepare_features",
+          "title": "Подготовка данных модели",
+          "status": "completed",
+          "message": "Подготовлены данные для 2 турбин на 48 ч. Средний ветер: 6.3 м/с.",
+          "duration_ms": 4
+        },
+        {
+          "id": "run_model",
+          "title": "Запуск модели",
+          "status": "completed",
+          "message": "Модель CatBoost рассчитала 96 почасовых значений для турбин 1, 2.",
+          "duration_ms": 92
+        },
+        {
+          "id": "validate_prediction",
+          "title": "Проверка прогноза",
+          "status": "completed",
+          "message": "Проверено 96 значений: почасовой шаг, отсутствие пропусков и диапазон [0, 1]. Предупреждений: 2.",
+          "duration_ms": 26
+        },
+        {
+          "id": "analyze_result",
+          "title": "Анализ результата",
+          "status": "completed",
+          "message": "Пересчёт не требуется. Несогласованных часов: 0/96; ограниченных значений: 0. Проверено обновление погоды.",
+          "duration_ms": 473
+        },
+        {
+          "id": "recompute",
+          "title": "Повторный расчёт",
+          "status": "skipped",
+          "message": "Анализ не выявил причин для пересчёта.",
+          "duration_ms": 0
+        },
+        {
+          "id": "generate_explanation",
+          "title": "Формирование объяснения",
+          "status": "completed",
+          "message": "OpenAI (gpt-4o-mini): объяснение по 16 группам фактов, предупреждениям и решению о пересчёте.",
+          "duration_ms": 3148
+        }
+      ],
+      "point_counts": [
+        48,
+        48
+      ]
+    }
+  ]
+}
