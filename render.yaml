@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: windai
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: main
+    dockerfilePath: ./Dockerfile.render
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeployTrigger: off
+    envVars:
+      - key: MODEL_ADAPTER
+        value: real
+      - key: WEATHER_PROVIDER
+        value: archive
+      - key: OPENAI_API_KEY
+        value: ""
+      - key: EXPLANATION_LANGUAGE
+        value: ru
+      - key: ENV
+        value: production
