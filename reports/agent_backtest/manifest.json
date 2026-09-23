@@ -1,0 +1,22 @@
+{
+  "origin_start": "2026-01-31",
+  "origin_end": "2026-02-28",
+  "timezone": "Asia/Almaty",
+  "runs": 58,
+  "prediction_rows": {
+    "24": 1392,
+    "48": 2784
+  },
+  "weather_sources": [
+    "archive"
+  ],
+  "recomputations": 0,
+  "failures": [],
+  "horizon_definition": "target_timestamp = forecast_origin + (horizon_hours - 1) hours",
+  "explanation_sources": "See each run in runs.jsonl; templates are used unless --llm is set.",
+  "sha256": {
+    "predictions_24h.csv": "a9fb955dc40a12e0dbf9f1ee7bbf4582854294e66e5842cfd4cc38ba08ab0dfe",
+    "predictions_48h.csv": "0fe9cec729a6d4146b207e20833dcc84e71095b37aa08fcada3a126d683c14a8",
+    "runs.jsonl": "c62053721fdaa82a9200ce38a521c2c6447ac4f464987ba390318ef02c665e1e"
+  }
+}
