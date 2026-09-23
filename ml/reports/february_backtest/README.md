@@ -1,35 +1,33 @@
-# Real archived-weather February replay
+﻿# Прогнозы за февраль 2026 года
 
-The imported backend CSV contains 2,784 rows: 29 origins, two turbines and
-48 target hours. It was read locally; ML made no weather API requests and did
-not load February actual-power labels. Source files match `origin/backend`.
+**Сохранены реальные прогнозы CatBoost для обеих турбин. Это результаты расчёта, а не оценки точности:** фактическая мощность февраля пока не предоставлена.
 
-| Forecast window | Saved rows | Weather lead from source run | Normalized power range |
-| --- | ---: | --- | --- |
-| [24h predictions](24h/predictions.csv) | 1,392 | 7–30 hours | 0.008232–0.990205 |
-| [48h predictions](48h/predictions.csv) | 2,784 | 7–54 hours | 0.008041–0.990767 |
+## Что рассчитано
 
-All 58 batches satisfy `run_init + 6h = weather_valid_time <= forecast_origin`.
-The `run=` timestamp in weather_source is explicit UTC metadata, converted
-explicitly to Asia/Almaty to calculate weather lead. The input's +05:00 offsets
-were checked against Asia/Almaty, preserving all local clock hours.
+Воспроизведены 29 ежедневных запусков — с **31 января по 28 февраля 2026 года**. На каждом запуске рассчитаны следующие 24 и 48 часов.
 
-Weather values are identical for both turbines, as expected for their shared
-Open-Meteo grid cell. Separate CatBoost models use wind and temperature only;
-weather lead is not a model feature. The output `horizon_hours` indexes the
-power-forecast intervals from origin, 1–24 or 1–48, not NWP weather lead.
+| Горизонт | Строк в результате | Скачать |
+| --- | ---: | --- |
+| 24 часа | 1 392 | [Прогнозы CSV](24h/predictions.csv) |
+| 48 часов | 2 784 | [Прогнозы CSV](48h/predictions.csv) |
 
-January 31 uses models last trained on January 30 at 23:00, available at
-January 31 midnight. February origins use models last trained on January 31
-at 23:00. Every model version and training availability boundary was verified.
-No February observations enter training or features.
+Каждая строка содержит момент выпуска прогноза, целевой час, номер турбины, прогноз мощности, погодные входы и версию модели. Мощность указана от 0 до 1 относительно номинальной. Прогнозы одного часа, выпущенные в разные дни, сохранены отдельно.
 
-Each run.json stores input/output hashes, weather sources, availability, true
-weather lead bounds, model versions and diagnostics. All forecasts are finite
-and within [0,1]; no clipping or low-wind/high-power warnings occurred. Forecast
-keys are unique per origin/target/turbine; overlapping targets across origins
-remain separate. Saved file hashes were independently reconciled.
+## Откуда взялась погода
 
-**These are forecasts, not accuracy metrics.** MAE/RMSE/R² remain unavailable
-until actual February power labels are supplied. Evaluation is a separate
-command documented in [the CSV backtest guide](../../integration/csv_backtesting.md).
+Backend предоставил [CSV из архива Open-Meteo Single Runs API](../../../data/weather/february_backtest.csv), модель `ecmwf_ifs`: 2 784 строки. ML прочитал этот файл и не обращался к погодному API.
+
+Для всех 58 сочетаний «дата — турбина» проверено, что прогноз погоды был доступен до начала расчёта. Заблаговременность от выпуска погодной модели — **7–54 часа**. Время расчётов — **Asia/Almaty**.
+
+Погода двух турбин одинакова: они находятся в одной ячейке погодной сетки. Разные результаты мощности дают отдельные модели турбин.
+
+## Как исключено подглядывание
+
+- Для запуска 31 января модель обучена только по 30 января включительно.
+- Для февральских запусков использованы модели, обученные по 31 января.
+- Февральская фактическая мощность не использовалась ни при обучении, ни в признаках.
+- Оценка ошибки запускается отдельно, после получения фактических измерений.
+
+Все прогнозы конечны и находятся в диапазоне [0, 1]; исправлять выход за границы не потребовалось. Контрольные суммы файлов, версии моделей и сведения о погоде сохранены в журналах [24 часа](24h/run.json) и [48 часов](48h/run.json).
+
+Подробнее: [отчёт об архивной погоде](../../../reports/weather_backtest_export.md) · [аудит ML](../ml_audit.md) · [команды воспроизведения](../../README.md).
