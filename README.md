@@ -121,7 +121,7 @@ Backend → `:8000`, frontend → `:5173`.
 | `ENV` | `development` | `development` / `production` / `test` |
 | `CORS_ORIGINS` | `http://localhost:5173,…` | Разрешённые origin через запятую |
 | `MODEL_ADAPTER` | `mock` | `mock` или `real` (реальная CatBoost-модель) |
-| `WEATHER_PROVIDER` | `mock` | `mock` (детерминированная демо-погода, офлайн) или `open_meteo` (живой API с фолбэком на mock) |
+| `WEATHER_PROVIDER` | `mock` | `mock` (детерминированная демо-погода, офлайн) или `open_meteo` (Open-Meteo Historical Forecast API с фолбэком на mock; только для демо, не для оценки качества — см. [погодные данные](#погодные-данные-живое-демо-и-backtest)) |
 
 ---
 
@@ -192,7 +192,7 @@ predict_power(
                              #          predicted_power, model_version
 ```
 
-**Погоду получает бэкенд, а не ML-функция.** `WeatherService` загружает её (Open-Meteo Historical Forecast API: архив прогнозов NWP, т.е. ровно то, что было известно на момент выпуска прогноза) и передаёт в `ModelAdapter` уже готовый weather DataFrame. `predict_power` погоду сама **не** запрашивает.
+**Погоду получает бэкенд, а не ML-функция.** Бэкенд загружает её и передаёт в `ModelAdapter` уже готовый weather DataFrame. `predict_power` погоду сама **не** запрашивает. Источников погоды два, и у них разное назначение — см. раздел [«Погодные данные: живое демо и backtest»](#погодные-данные-живое-демо-и-backtest).
 
 Соглашения, которые фиксирует бэкенд:
 
@@ -218,6 +218,25 @@ predict_power(
 3. Указать `MODEL_ADAPTER=real` в `backend/.env`.
 
 `RealModelAdapter` (`app/ml/real_model.py`) уже написан: он импортирует `predict_power` и выполняет синхронный CatBoost-инференс в thread pool, не блокируя event loop. Если `predictor.py` отсутствует, сервер при старте упадёт с понятной ошибкой, а не в середине запроса.
+
+---
+
+## Погодные данные: живое демо и backtest
+
+Бэкенд получает погоду двумя разными путями. Путать их нельзя: только второй годится для честной оценки модели.
+
+| | Живой дашборд | Строгий backtest |
+|---|---|---|
+| Где | `WeatherService` → `POST /api/forecast` | `python -m backend.scripts.export_weather_backtest` |
+| Источник | Open-Meteo **Historical Forecast API** (`WEATHER_PROVIDER=open_meteo`) или демо-генератор (`mock`) | Open-Meteo **Single Runs API**, модель `ecmwf_ifs` (ECMWF IFS HRES 9 km) |
+| Что это за данные | Непрерывный ряд, склеенный из первых часов последовательных прогонов модели. Значения **ближе к анализу**, чем к прогнозу, выпущенному в момент `forecast_origin` | Один прогон целиком, выпущенный **до** `forecast_origin`, с известным временем инициализации |
+| Look-ahead | **Есть**: цель через +30 ч взята из прогона, выпущенного позже origin | **Нет**: для каждой строки проверяется `weather_valid_time ≤ forecast_origin ≤ timestamp` |
+| Назначение | Интерактивное демо: правдоподобная погода для выбранной даты | Бэктест ML-части и метрики качества |
+| Результат | Ответ API, в файл не сохраняется | `data/weather/february_backtest.csv` + [отчёт о покрытии](reports/weather_backtest_export.md) |
+
+**Правило выбора прогона в backtest.** Origin — полночь по `Asia/Almaty` (19:00 UTC предыдущих суток). Берётся самый свежий прогон, для которого `run_init + 6 ч ≤ forecast_origin`, где 6 ч — верхняя граница задержки публикации глобальных моделей по документации Open-Meteo. Для февраля 2026 это прогон 12Z предыдущих суток. Поле `weather_valid_time = run_init + 6 ч` фиксирует момент, когда прогноз стал доступен. Заблаговременность целевых часов от выпуска — 7–54 ч. Если прогон отсутствует в архиве, пробуются более ранние реальные прогоны; значения никогда не дорисовываются, пропуски попадают в `data/weather/february_backtest_skipped.csv`.
+
+Поэтому метрики качества, посчитанные на погоде живого дашборда, будут завышены. Для оценки использовать только backtest-CSV.
 
 ---
 

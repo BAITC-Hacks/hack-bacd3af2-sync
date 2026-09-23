@@ -86,7 +86,12 @@ class MockWeatherProvider(WeatherProvider):
 
 
 class OpenMeteoWeatherProvider(WeatherProvider):
-    """Open-Meteo Historical Forecast API: archived NWP forecasts, i.e. what was known at issue time."""
+    """Open-Meteo Historical Forecast API, for the interactive demo.
+
+    The series is stitched from the first hours of successive model runs, so it is close to
+    analysis, not the forecast issued at forecast_origin (look-ahead). Leakage-free backtest
+    weather comes from backend/scripts/export_weather_backtest.py (Single Runs API).
+    """
 
     source = "open_meteo"
 
