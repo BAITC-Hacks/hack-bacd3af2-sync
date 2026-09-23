@@ -10,8 +10,11 @@ services:
       APP_NAME: WindAI
       ENV: production
       CORS_ORIGINS: http://localhost:5173
-      MODEL_ADAPTER: ${MODEL_ADAPTER:-mock}  # real = ML team's CatBoost models (bundled in the image)
-      WEATHER_PROVIDER: ${WEATHER_PROVIDER:-mock}
+      # Values come from the shell or from a root .env file (see .env.example; never committed).
+      MODEL_ADAPTER: ${MODEL_ADAPTER:-real}  # real = ML team's CatBoost models (bundled in the image)
+      WEATHER_PROVIDER: ${WEATHER_PROVIDER:-open_meteo}  # falls back to synthetic weather if offline
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}  # empty → template explanation instead of the LLM
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
       interval: 10s
