@@ -1,6 +1,6 @@
 """Adapter for the ML team's trained CatBoost models (ml/ package).
 
-Enable with MODEL_ADAPTER=real. Install the inference stack first:
+Default adapter (MODEL_ADAPTER=real). Install the inference stack first:
     pip install -r backend/requirements-ml.txt
 
 Model selection by forecast_origin (anti-leakage)
@@ -51,7 +51,7 @@ def _ensure_on_path(ml_package_dir: Path) -> None:
     if not (ml_package_dir / "src" / "inference" / "predict.py").is_file():
         raise ModelUnavailableError(
             f"ML package not found at {ml_package_dir} (expected src/inference/predict.py). "
-            "Set ML_PACKAGE_DIR or switch back to MODEL_ADAPTER=mock."
+            "Set ML_PACKAGE_DIR. (MODEL_ADAPTER=mock is for offline development only, not for the demo.)"
         )
     path = str(ml_package_dir.resolve())
     if path not in sys.path:
@@ -61,7 +61,7 @@ def _ensure_on_path(ml_package_dir: Path) -> None:
 def _bundle_roots(model_dir: Path) -> list[Path]:
     if not model_dir.is_dir():
         raise ModelUnavailableError(
-            f"Model directory {model_dir} does not exist. Set TURBINE_MODEL_DIR or switch back to MODEL_ADAPTER=mock."
+            f"Model directory {model_dir} does not exist. Set TURBINE_MODEL_DIR. (MODEL_ADAPTER=mock is for offline development only, not for the demo.)"
         )
     return [model_dir, *sorted(path for path in model_dir.glob("asof_*") if path.is_dir())]
 
@@ -81,7 +81,7 @@ class RealModelAdapter(ModelAdapter):
         except ImportError as exc:
             raise ModelUnavailableError(
                 f"Cannot import the ML inference package ({exc}). "
-                "Install it with `pip install -r backend/requirements-ml.txt` or use MODEL_ADAPTER=mock."
+                "Install it with `pip install -r backend/requirements-ml.txt`. (MODEL_ADAPTER=mock is for offline development only.)"
             ) from exc
 
         self._predict_with_models: PredictWithModels = predict_with_models

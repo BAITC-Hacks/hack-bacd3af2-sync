@@ -68,8 +68,7 @@ cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-ml.txt        # backend + ml/requirements-inference.txt
 cp .env.example .env                      # then edit it; .env is git-ignored
-#   MODEL_ADAPTER=real          ← CatBoost models from ml/models
-#   WEATHER_PROVIDER=open_meteo ← live weather for the real turbine coordinates
+#   (defaults: MODEL_ADAPTER=real → CatBoost models, WEATHER_PROVIDER=open_meteo → live weather)
 #   OPENAI_API_KEY=<your-openai-key>  ← optional; empty = template explanation
 uvicorn app.main:app --reload             # http://localhost:8000/docs
 
@@ -79,7 +78,7 @@ npm ci
 npm run dev                               # http://localhost:5173
 ```
 
-`pip install -r requirements.txt` with the default `MODEL_ADAPTER=mock` runs the whole app offline, without CatBoost.
+The trained model and live weather are the **defaults**: a plain `uvicorn app.main:app` serves CatBoost predictions. The offline stand-ins exist only for development and must be requested explicitly: `MODEL_ADAPTER=mock WEATHER_PROVIDER=mock` (then `requirements.txt` without CatBoost is enough).
 
 **Where the OpenAI key goes:** into `backend/.env` for local runs or into the root `.env` for Docker. Both files are git-ignored. The OpenAI SDK reads `OPENAI_API_KEY` from the environment; the key never appears in code or in git.
 
@@ -262,8 +261,8 @@ Timestamps are naive Asia/Almaty wall-clock times. The real model numbers `horiz
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `MODEL_ADAPTER` | `mock` (Docker: `real`) | `real` = CatBoost bundles from `ml/models`; `mock` = offline stand-in |
-| `WEATHER_PROVIDER` | `mock` (Docker: `open_meteo`) | `open_meteo` = live weather, falls back to synthetic if unreachable |
+| `MODEL_ADAPTER` | `real` | `real` = the trained CatBoost bundles from `ml/models`; if they cannot load, the server refuses to start (no silent fallback). `mock` = offline power-curve formula, development only |
+| `WEATHER_PROVIDER` | `open_meteo` | `open_meteo` = live weather (if the API drops mid-run, synthetic weather is used *visibly*: warning, `weather_source: "mock"`, retry in `analyze_result`); `mock` = synthetic weather, development only |
 | `OPENAI_API_KEY` | empty | Enables LLM explanations; empty = template |
 | `OPENAI_MODEL` | `gpt-4o-mini` | LLM for the explanation step |
 | `EXPLANATION_LANGUAGE` | `ru` | Language of the LLM explanation: `ru` (default, matches the Russian UI) or `en` |
