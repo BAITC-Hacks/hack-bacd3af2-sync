@@ -41,7 +41,7 @@ export function Header() {
 export function MobileHeader() {
   return (
     <div className="flex items-center justify-between border-b border-line bg-sidebar/90 px-4 py-3 backdrop-blur lg:hidden">
-      <Link to="/forecast" className="flex items-center gap-2" aria-label="WindAI — на главную">
+      <Link to="/forecast" className="flex items-center gap-2" aria-label="WindAI: на главную">
         <TurbineMark className="h-7 w-6" />
         <span className="font-display text-xl text-ink">WindAI</span>
       </Link>

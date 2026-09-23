@@ -107,10 +107,10 @@ export function AiExplanation({ forecast, isLoading }: AiExplanationProps) {
                     <dt className="text-ink-subtle">Автор текста</dt>
                     <dd className="text-ink-muted">{SOURCE_LABELS[forecast.explanationSource ?? "template"]}</dd>
                     <dt className="text-ink-subtle">Модель</dt>
-                    <dd className="font-mono text-[11px] break-all text-ink-muted">{forecast.modelVersion ?? "—"}</dd>
+                    <dd className="font-mono text-[11px] break-all text-ink-muted">{forecast.modelVersion ?? "нет данных"}</dd>
                     <dt className="text-ink-subtle">Погода</dt>
                     <dd className="text-ink-muted">
-                      {forecast.weatherSource ? (WEATHER_SOURCE_LABELS[forecast.weatherSource] ?? forecast.weatherSource) : "—"}
+                      {forecast.weatherSource ? (WEATHER_SOURCE_LABELS[forecast.weatherSource] ?? forecast.weatherSource) : "нет данных"}
                     </dd>
                     <dt className="text-ink-subtle">Сформировано</dt>
                     <dd className="text-ink-muted">{formatRelativeTime(forecast.generatedAt)}</dd>

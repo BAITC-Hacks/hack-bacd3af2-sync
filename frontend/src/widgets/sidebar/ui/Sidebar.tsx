@@ -16,7 +16,7 @@ const itemBase = "flex h-[46px] items-center gap-3.5 rounded-[12px] border px-4 
 
 export function Logo() {
   return (
-    <Link to="/forecast" aria-label="WindAI — на главную" className="flex items-center gap-3">
+    <Link to="/forecast" aria-label="WindAI: на главную" className="flex items-center gap-3">
       <TurbineMark className="h-11 w-9" />
       <span>
         <span className="block font-display text-[24px] leading-none text-ink">WindAI</span>

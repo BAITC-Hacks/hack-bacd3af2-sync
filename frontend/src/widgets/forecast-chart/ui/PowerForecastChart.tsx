@@ -73,7 +73,7 @@ export function PowerForecastChart({ forecast, isLoading }: PowerForecastChartPr
             title={forecast?.status === "failed" ? "Прогноз не построен" : "Прогноза пока нет"}
             description={
               forecast?.status === "failed"
-                ? "Агент остановился до построения прогноза — подробности в блоке «Работа агента»."
+                ? "Агент остановился до построения прогноза. Подробности в блоке «Работа агента»."
                 : "Выберите дату, турбины и горизонт, затем запустите агента."
             }
           />

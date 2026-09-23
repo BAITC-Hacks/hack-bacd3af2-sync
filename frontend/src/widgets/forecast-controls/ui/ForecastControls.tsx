@@ -52,7 +52,7 @@ export function ForecastControls({ params, onParamsChange, onRun, isRunning, top
               <span className="text-cream-gradient">чистое завтра</span>
             </h1>
             <p className="mt-5 max-w-[480px] text-[16px] leading-relaxed text-ink/80 2xl:text-[17px]">
-              Агентный ИИ для прогноза выработки ветровой энергии. От погоды к выводам — за секунды.
+              Агентный ИИ для прогноза выработки ветровой энергии. От погоды к выводам за секунды.
             </p>
           </motion.div>
 

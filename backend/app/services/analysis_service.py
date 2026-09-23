@@ -60,7 +60,7 @@ def detect_weather_anomalies(turbine_id: int, weather: pd.DataFrame) -> list[str
         worst = storm.loc[storm["wind_speed"].idxmax()]
         warnings.append(
             f"{name}: wind reaches {worst['wind_speed']:.1f} m/s at {_fmt_time(worst['timestamp'])}, "
-            f"above the {CUT_OUT_WIND_SPEED:g} m/s cut-out speed — protective shutdown is likely "
+            f"above the {CUT_OUT_WIND_SPEED:g} m/s cut-out speed; protective shutdown is likely "
             f"({len(storm)} h affected)."
         )
 
@@ -69,7 +69,7 @@ def detect_weather_anomalies(turbine_id: int, weather: pd.DataFrame) -> list[str
         coldest = cold.loc[cold["temperature"].idxmin()]
         warnings.append(
             f"{name}: temperature drops to {coldest['temperature']:.1f} °C at "
-            f"{_fmt_time(coldest['timestamp'])} — outside standard cold-climate operating limits."
+            f"{_fmt_time(coldest['timestamp'])}, outside standard cold-climate operating limits."
         )
     return warnings
 
@@ -85,7 +85,7 @@ def detect_power_anomalies(turbine_id: int, prediction: pd.DataFrame) -> list[st
         delta = ordered.loc[idx, "predicted_power"] - ordered.loc[idx - 1, "predicted_power"]
         warnings.append(
             f"{name}: sharp ramp of {delta:+.2f} within one hour at "
-            f"{_fmt_time(ordered.loc[idx, 'timestamp'])} — plan balancing reserve."
+            f"{_fmt_time(ordered.loc[idx, 'timestamp'])}; plan balancing reserve."
         )
 
     suspicious = ordered[
@@ -96,12 +96,12 @@ def detect_power_anomalies(turbine_id: int, prediction: pd.DataFrame) -> list[st
     if not suspicious.empty:
         warnings.append(
             f"{name}: near-zero output predicted for {len(suspicious)} h despite wind above "
-            f"{_STRONG_WIND_FOR_OUTPUT:g} m/s — check for curtailment or model drift."
+            f"{_STRONG_WIND_FOR_OUTPUT:g} m/s; check for curtailment or model drift."
         )
 
     if ordered["predicted_power"].mean() < LOW_GENERATION_AVG:
         warnings.append(
-            f"{name}: average output below {LOW_GENERATION_AVG:.0%} of rated capacity — "
+            f"{name}: average output below {LOW_GENERATION_AVG:.0%} of rated capacity: "
             "a calm period is expected."
         )
     return warnings
@@ -276,7 +276,7 @@ def _sentences_en(sig: _Signals, horizon_hours: int) -> list[str]:
     sentences.append(_recompute_sentence(sig.recompute))
     if sig.warning_count:
         sentences.append(
-            f"{sig.warning_count} operational warning(s) were raised — review them before dispatch planning."
+            f"{sig.warning_count} operational warning(s) were raised; review them before dispatch planning."
         )
     else:
         sentences.append("All values stay within normalized physical bounds and no operational anomalies were found.")
@@ -352,11 +352,11 @@ def _sentences_ru(sig: _Signals, horizon_hours: int) -> list[str]:
     else:
         reasons = "; ".join(_RU_REASONS[code] for code in sig.recompute.reason_codes) or "самопроверка выявила проблему"
         outcome = _RU_OUTCOMES.get(sig.recompute.outcome_code or "", "")
-        sentences.append(f"Агент один раз пересчитал прогноз, потому что {reasons}, — {outcome}")
+        sentences.append(f"Агент один раз пересчитал прогноз, потому что {reasons}: {outcome}")
     if sig.warning_count:
         noun = _ru_plural(sig.warning_count, "эксплуатационное предупреждение", "эксплуатационных предупреждения",
                           "эксплуатационных предупреждений")
-        sentences.append(f"Выявлено {sig.warning_count} {noun} — проверьте их перед планированием диспетчеризации.")
+        sentences.append(f"Выявлено {sig.warning_count} {noun}, проверьте их перед планированием диспетчеризации.")
     else:
         sentences.append("Все значения в пределах физических границ, эксплуатационных аномалий не обнаружено.")
     return sentences
@@ -369,7 +369,7 @@ def _recompute_sentence(recompute: RecomputeInfo) -> str:
             "no fallback weather and no physically inconsistent hours."
         )
     reasons = "; ".join(recompute.reasons) or "the analysis flagged the first result"
-    return f"The agent recomputed the forecast once because {reasons} — {recompute.outcome}"
+    return f"The agent recomputed the forecast once because {reasons}: {recompute.outcome}"
 
 
 def build_explanation_facts(

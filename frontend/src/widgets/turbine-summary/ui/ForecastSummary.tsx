@@ -25,7 +25,7 @@ function Row({ label, value, extra }: { label: string; value: ReactNode; extra?:
 /** Forecast Summary section (rendered inside the right-column card). */
 export function ForecastSummary({ forecast, isLoading }: ForecastSummaryProps) {
   const summary = forecast?.summary ?? null;
-  const placeholder = isLoading ? <Skeleton className="h-4 w-12" /> : "—";
+  const placeholder = isLoading ? <Skeleton className="h-4 w-12" /> : "…";
 
   return (
     <section aria-labelledby="summary-title">

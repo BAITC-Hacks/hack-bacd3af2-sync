@@ -9,9 +9,9 @@ import { Skeleton } from "@/shared/ui";
 import { SeriesMarker } from "@/shared/ui/chart";
 
 const COLUMNS = [
-  { key: "mae", label: "MAE", digits: 3, hint: "Средняя абсолютная ошибка — чем меньше, тем лучше" },
-  { key: "rmse", label: "RMSE", digits: 3, hint: "Среднеквадратичная ошибка — чем меньше, тем лучше" },
-  { key: "r2", label: "R²", digits: 2, hint: "Объяснённая дисперсия — чем ближе к 1, тем лучше" },
+  { key: "mae", label: "MAE", digits: 3, hint: "Средняя абсолютная ошибка: чем меньше, тем лучше" },
+  { key: "rmse", label: "RMSE", digits: 3, hint: "Среднеквадратичная ошибка: чем меньше, тем лучше" },
+  { key: "r2", label: "R²", digits: 2, hint: "Объяснённая дисперсия: чем ближе к 1, тем лучше" },
 ] as const;
 
 function caption(report: ModelMetricsReport | undefined): string {

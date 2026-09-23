@@ -56,7 +56,7 @@ export function AgentStepItem({ step, index, isLast }: AgentStepItemProps) {
         <div className="flex items-baseline justify-between gap-3">
           <p className={cn("text-[13.5px] leading-snug", isMuted ? "text-ink-muted" : "text-ink")}>
             {stepTitle(step.id, step.title)}
-            <span className="sr-only"> — {STATUS_LABELS[step.status]}</span>
+            <span className="sr-only">, {STATUS_LABELS[step.status]}</span>
           </p>
           {step.durationMs !== undefined ? (
             <span className="shrink-0 text-[11.5px] text-ink-muted tabular-nums">{formatDuration(step.durationMs)}</span>

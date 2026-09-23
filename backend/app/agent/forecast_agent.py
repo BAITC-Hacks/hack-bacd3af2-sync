@@ -150,7 +150,7 @@ class ForecastAgent:
                 "Live weather API was unavailable, so demo weather was used instead: "
                 f"{batch.fallback_reason}"
             )
-            message += " Primary provider failed — the agent switched to the fallback source."
+            message += " Primary provider failed, so the agent switched to the fallback source."
         return message
 
     async def _validate_weather(self, context: AgentContext) -> str:
@@ -312,7 +312,7 @@ class ForecastAgent:
             f"{consistency.inconsistent_hours}/{consistency.total_hours} physically inconsistent hours "
             f"({consistency.share:.0%}, trigger at {INCONSISTENT_SHARE_TRIGGER:.0%})"
         )
-        return " ".join([f"No recompute needed — checked {checks}.", *notes])
+        return " ".join([f"No recompute needed: checked {checks}.", *notes])
 
     async def _recompute(self, context: AgentContext) -> str:
         """Run the pipeline once more on fresh input and adopt the result. Never loops."""
@@ -334,7 +334,7 @@ class ForecastAgent:
             context.recompute_outcome = "the recompute failed, so the original validated forecast was kept."
             context.recompute_outcome_code = "failed"
             raise StepFailedError(
-                f"Recompute failed at “{STEP_TITLES[current]}”: {exc} — kept the original validated forecast."
+                f"Recompute failed at “{STEP_TITLES[current]}”: {exc}; kept the original validated forecast."
             ) from exc
 
         before = context.summary.average_power if context.summary else None
@@ -347,7 +347,7 @@ class ForecastAgent:
             context.recompute_outcome = f"the trigger persisted after recompute ({'; '.join(remaining)})."
             context.recompute_outcome_code = "persisted"
             context.warnings.append(
-                f"Recompute did not remove the trigger ({'; '.join(remaining)}) — treat this forecast with caution."
+                f"Recompute did not remove the trigger ({'; '.join(remaining)}); treat this forecast with caution."
             )
             return f"Recomputed once on fresh input (weather: {sub.weather_source}).{change} Trigger persists: {'; '.join(remaining)}."
 
@@ -376,7 +376,7 @@ class ForecastAgent:
 
         if self._explainer is None:
             context.explanation, context.explanation_source = template, "template"
-            return f"Template explanation from {signals} signal(s) — LLM disabled (OPENAI_API_KEY is not set)."
+            return f"Template explanation from {signals} signal(s); LLM disabled (OPENAI_API_KEY is not set)."
 
         facts = analysis_service.build_explanation_facts(
             data,
@@ -400,7 +400,7 @@ class ForecastAgent:
             )
 
         context.explanation, context.explanation_source = template, "template"
-        return f"{self._explainer.name} unavailable ({reason}) — used the template explanation ({signals} signal(s))."
+        return f"{self._explainer.name} unavailable ({reason}); used the template explanation ({signals} signal(s))."
 
     # --- helpers ------------------------------------------------------------------------
 

@@ -17,7 +17,7 @@ export const AGENT_PIPELINE: readonly PipelineStage[] = [
   { id: "run_model", title: "Запуск ML-модели", description: "Почасовая нормированная мощность по турбинам" },
   { id: "validate_prediction", title: "Проверка прогноза", description: "NaN, границы [0, 1], горизонт, аномалии" },
   { id: "analyze_result", title: "Анализ результата", description: "Самопроверка: обрезка, резервная погода, физика" },
-  { id: "recompute", title: "Повторный расчёт", description: "Один перезапуск на свежих данных — только при необходимости" },
+  { id: "recompute", title: "Повторный расчёт", description: "Один перезапуск на свежих данных, только при необходимости" },
   { id: "generate_explanation", title: "Формирование объяснения", description: "Текстовый вывод по результатам прогноза" },
 ];
 
