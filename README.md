@@ -1,5 +1,7 @@
 # WindAI — Agentic AI for Wind Farm Power Forecasting
 
+Hackathon team repository for SYNC
+
 **WindAI** прогнозирует почасовую выработку ветроэлектростанции на 24–48 часов вперёд. Прогноз строит не одиночный вызов модели, а **AI-агент**: он получает погоду, проверяет её, запускает ML-модель, валидирует результат, находит аномалии и объясняет вывод человеческим языком.
 
 ![stack](https://img.shields.io/badge/FastAPI-Pydantic_v2-0a9cc0) ![stack](https://img.shields.io/badge/React_19-TypeScript-8b5cf6) ![stack](https://img.shields.io/badge/TanStack-Router_%2B_Query-22d3ee)
@@ -64,6 +66,7 @@ wind-ai/
 │       ├── features/        select-forecast-date, select-turbine, select-horizon, run-forecast
 │       ├── entities/        forecast, turbine, agent, metrics (типы, API, маппинг DTO)
 │       └── shared/          UI-кит, API-клиент, утилиты, палитра
+├── ml/                      ML-часть на Python (см. ml/README.md)
 └── docker-compose.yml
 ```
 
@@ -160,6 +163,14 @@ Backend → `:8000`, frontend → `:5173`.
 { "models": [{ "turbine_id": 1, "mae": 0.084, "rmse": 0.121, "r2": 0.78 }, { "turbine_id": 2, "mae": 0.091, "rmse": 0.134, "r2": 0.74 }], "source": "demo" }
 ```
 Пока ML-часть не положила `backend/models/metrics.json`, отдаются демо-метрики (`source: "demo"`, во фронте бейдж «Demo metrics»).
+
+---
+
+## ML-часть
+
+The Python ML component is in [ml/](ml/README.md). Stage 1 provides a reproducible
+quality audit of both turbine CSV datasets. See the generated
+[data quality report](ml/reports/data_quality.md) for findings and the staged plan.
 
 ---
 

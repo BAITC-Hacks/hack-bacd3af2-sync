@@ -16,8 +16,15 @@ build/
 
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
 .pytest_cache/
+
+# ML data (raw CSVs and processed artifacts stay local)
+ml/data/raw/*.csv
+ml/data/processed/
+
+# Scratch
+tmp/
 
 # Local env files (templates are .env.example)
 .env
