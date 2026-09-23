@@ -10,7 +10,11 @@ import numpy as np
 import pandas as pd
 
 REPORTS = Path(__file__).resolve().parents[2] / "reports"
-COLORS = ("#168B91", "#E69654")
+COLORS = ("#DCC18C", "#93A880")
+BACKGROUND = "#10120D"
+PANEL = "#1B1D16"
+TEXT = "#EFE8D8"
+MUTED = "#B7B29F"
 NOTE = "Декабрь 2025 — январь 2026 · проверка на фактической погоде"
 
 
@@ -19,11 +23,12 @@ def main():
     out.mkdir(exist_ok=True)
     plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 10,
                          "axes.spines.top": False, "axes.spines.right": False,
-                         "axes.titleweight": "bold", "axes.labelcolor": "#263445",
-                         "text.color": "#263445", "figure.facecolor": "#F5F8FA",
-                         "axes.facecolor": "#F5F8FA", "axes.edgecolor": "#D7E0E7",
-                         "xtick.color": "#64748B", "ytick.color": "#64748B",
-                         "axes.axisbelow": True, "savefig.facecolor": "#F5F8FA"})
+                         "axes.titleweight": "bold", "axes.labelcolor": TEXT,
+                         "text.color": TEXT, "figure.facecolor": BACKGROUND,
+                         "axes.facecolor": PANEL, "axes.edgecolor": "#454737",
+                         "xtick.color": MUTED, "ytick.color": MUTED,
+                         "grid.color": MUTED,
+                         "axes.axisbelow": True, "savefig.facecolor": BACKGROUND})
     data = {}
     for tid in (1, 2):
         frame = pd.read_csv(REPORTS / f"turbine_{tid}_validation_predictions.csv.gz",
@@ -32,8 +37,8 @@ def main():
 
     def save(fig, name, title, subtitle, footer):
         fig.suptitle(title, x=.075, y=.96, ha="left", fontsize=17, fontweight="bold")
-        fig.text(.075, .897, subtitle, fontsize=9, color="#64748B")
-        fig.text(.075, .035, footer, fontsize=8, color="#64748B")
+        fig.text(.075, .897, subtitle, fontsize=9, color=MUTED)
+        fig.text(.075, .035, footer, fontsize=8, color=MUTED)
         fig.savefig(out / name, dpi=140)
         plt.close(fig)
         print(out / name)
@@ -84,7 +89,7 @@ def main():
             frame = data[tid].loc[data[tid].forecast_origin.eq(origin)].set_index("timestamp")
             assert not frame.empty and frame.index.is_unique
             frame = frame.reindex(pd.date_range(origin, periods=48, freq="h"))
-            ax.plot(frame.index, frame.power_mean, color="#334155", lw=1.8, label="Факт")
+            ax.plot(frame.index, frame.power_mean, color=TEXT, lw=1.8, label="Факт")
             ax.plot(frame.index, frame.catboost_weather, color=COLORS[row], lw=2, ls="--", label="Модель")
             mae = (frame.power_mean-frame.catboost_weather).abs().mean()
             ax.set_title(f"{origin:%d.%m.%Y} · 48 часов\nMAE {mae:.3f}".replace('MAE 0.', 'MAE 0,'), fontsize=10, loc="left")
